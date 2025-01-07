@@ -1,0 +1,8 @@
+AAAAAAAABBBBCCCC
+character - 8 bits (must be a printable ascii character no bigger than 127
+fg color - 4 bits (16 colors)
+bg color - 4 bits (16 colors)
+each cell occupies 2 bytes of space
+a 80x24 image, uncompressed, is about 2 kb
+in absolute worst case, if we had a mega big image (240x72) it would still take
+up less than a megabyte:
