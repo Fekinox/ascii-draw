@@ -8,7 +8,7 @@ type CellColor byte
 
 const (
 	DefaultColor = 0
-	ValidColor = 1 << 4
+	ValidColor   = 1 << 4
 )
 
 const (
@@ -49,7 +49,7 @@ func MakeBuffer(width, height int) *Buffer {
 func (b *Buffer) Render(screen tcell.Screen, x, y int, overwrite bool) {
 	for dy := range b.Data.Height {
 		for dx := range b.Data.Width {
-			xx, yy := x + dx, y + dy
+			xx, yy := x+dx, y+dy
 			c := b.Data.MustGet(dx, dy)
 			if overwrite && c.Value == 0 {
 				screen.SetContent(xx, yy, ' ', nil, c.Style)
@@ -63,7 +63,7 @@ func (b *Buffer) Render(screen tcell.Screen, x, y int, overwrite bool) {
 func (b *Buffer) RenderWith(p Painter, x, y int, overwrite bool) {
 	for dy := range b.Data.Height {
 		for dx := range b.Data.Width {
-			xx, yy := x + dx, y + dy
+			xx, yy := x+dx, y+dy
 			c := b.Data.MustGet(dx, dy)
 			if overwrite && c.Value == 0 {
 				p.SetByte(xx, yy, ' ', c.Style)
@@ -86,7 +86,7 @@ func (b *Buffer) Set(x int, y int, v byte, s tcell.Style) {
 }
 
 func (b *Buffer) SetString(x int, y int, s []byte, st tcell.Style) {
-	for i, ch := range s{
+	for i, ch := range s {
 		b.Data.Set(x+i, y, Cell{
 			Value: ch,
 			Style: st,

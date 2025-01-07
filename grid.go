@@ -114,7 +114,7 @@ func (g *Grid[T]) GetRef(x, y int) (*T, bool) {
 		return nil, false
 	}
 
-	return &g.data[y*g.Width + x], true
+	return &g.data[y*g.Width+x], true
 }
 
 func (g *Grid[T]) Resize(ox, oy int, neww, newh int, def T) Grid[T] {

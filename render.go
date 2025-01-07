@@ -19,10 +19,10 @@ type Painter interface {
 type DefaultPainter struct{}
 
 type CropPainter struct {
-	p Painter
+	p            Painter
 	offsetBefore Position
-	area Area
-	offsetAfter Position
+	area         Area
+	offsetAfter  Position
 }
 
 var (
@@ -38,14 +38,14 @@ func (d DefaultPainter) SetRune(x, y int, v rune, combining []rune, style tcell.
 }
 
 func (a *CropPainter) SetByte(x, y int, v byte, style tcell.Style) {
-	xx, yy := x + a.offsetBefore.X, y + a.offsetBefore.Y
+	xx, yy := x+a.offsetBefore.X, y+a.offsetBefore.Y
 	if a.area.Contains(xx, yy) {
 		a.p.SetByte(xx+a.offsetAfter.X, yy+a.offsetAfter.Y, v, style)
 	}
 }
 
 func (a *CropPainter) SetRune(x, y int, v rune, combining []rune, style tcell.Style) {
-	xx, yy := x + a.offsetBefore.X, y + a.offsetBefore.Y
+	xx, yy := x+a.offsetBefore.X, y+a.offsetBefore.Y
 	if a.area.Contains(xx, yy) {
 		a.p.SetRune(xx+a.offsetAfter.X, yy+a.offsetAfter.Y, v, combining, style)
 	}
