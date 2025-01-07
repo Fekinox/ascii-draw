@@ -147,7 +147,7 @@ func BorderBox(area Area, style tcell.Style) {
 
 // Bresenham's line algorithm
 func drawLineLow(screen tcell.Screen, ax, ay, bx, by int) {
-	dx, dy := bx - ax, by - ay
+	dx, dy := bx-ax, by-ay
 	yi := 1
 	if dy < 0 {
 		yi = -1
@@ -160,15 +160,15 @@ func drawLineLow(screen tcell.Screen, ax, ay, bx, by int) {
 		screen.SetContent(x, y, '#', nil, tcell.StyleDefault)
 		if D > 0 {
 			y += yi
-			D += 2*(dy-dx)
+			D += 2 * (dy - dx)
 		} else {
-			D += 2*dy
+			D += 2 * dy
 		}
 	}
 }
 
 func drawLineHigh(screen tcell.Screen, ax, ay, bx, by int) {
-	dx, dy := bx - ax, by - ay
+	dx, dy := bx-ax, by-ay
 	xi := 1
 	if dx < 0 {
 		xi = -1
@@ -181,16 +181,16 @@ func drawLineHigh(screen tcell.Screen, ax, ay, bx, by int) {
 		screen.SetContent(x, y, '#', nil, tcell.StyleDefault)
 		if D > 0 {
 			x += xi
-			D += 2*(dx-dy)
+			D += 2 * (dx - dy)
 		} else {
-			D += 2*dx
+			D += 2 * dx
 		}
 	}
 }
 
 func DrawLine(screen tcell.Screen, ax, ay, bx, by int) {
-	dx, dy := bx - ax, by - ay
-	if max(dy,-dy) < max(dx,-dx) {
+	dx, dy := bx-ax, by-ay
+	if max(dy, -dy) < max(dx, -dx) {
 		if dx < 0 {
 			ax, ay, bx, by = bx, by, ax, ay
 		}
@@ -202,4 +202,3 @@ func DrawLine(screen tcell.Screen, ax, ay, bx, by int) {
 		drawLineHigh(screen, ax, ay, bx, by)
 	}
 }
-

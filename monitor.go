@@ -7,11 +7,10 @@ import (
 )
 
 type Monitor struct {
-	lastAction Action
+	lastAction    Action
 	hasLastAction bool
-	lastEvent tcell.Event
-	hasLastEvent bool
-
+	lastEvent     tcell.Event
+	hasLastEvent  bool
 }
 
 func (m *Monitor) HandleAction(action Action) {

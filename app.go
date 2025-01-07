@@ -14,7 +14,7 @@ const UPDATE_TICK_RATE_MS float64 = 1000.0 / float64(FRAMES_PER_SECOND)
 const TIME_SCALE float64 = 1
 
 type App struct {
-	widget Widget
+	widget             Widget
 	lastRenderDuration float64
 	DefaultStyle       tcell.Style
 

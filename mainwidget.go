@@ -18,7 +18,7 @@ type MainWidget struct {
 
 type LineSegment struct {
 	start Position
-	end Position
+	end   Position
 }
 
 var (
@@ -28,7 +28,7 @@ var (
 func Init() *MainWidget {
 	w := &MainWidget{
 		selectionMask: MakeGrid(200, 200, false),
-		currentState: &NormalState{},
+		currentState:  &NormalState{},
 	}
 	w.currentState.OnEnter(w)
 	return w
