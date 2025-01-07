@@ -107,7 +107,7 @@ func (a *App) Loop() {
 			case *tcell.EventResize:
 				Screen.Sync()
 			case *tcell.EventKey:
-				if ev.Key() == tcell.KeyEscape || ev.Key() == tcell.KeyCtrlC {
+				if ev.Key() == tcell.KeyEscape {
 					return
 				} else if ev.Key() == tcell.KeyCtrlL {
 					Screen.Sync()

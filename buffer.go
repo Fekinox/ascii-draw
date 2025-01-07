@@ -41,7 +41,7 @@ type Buffer struct {
 
 func MakeBuffer(width, height int) *Buffer {
 	b := &Buffer{
-		Data: MakeGrid(width, height, Cell{Value: '.'}),
+		Data: MakeGrid(width, height, Cell{Value: ' '}),
 	}
 	return b
 }

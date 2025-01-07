@@ -5,6 +5,10 @@ import (
 )
 
 type MainWidget struct {
+	app *App
+
+	sx int
+	sy int
 	sw int
 	sh int
 
@@ -20,6 +24,9 @@ type MainWidget struct {
 	isPan      bool
 	panOriginX int
 	panOriginY int
+
+	hasTool     bool
+	currentTool Tool
 }
 
 var (
@@ -47,6 +54,10 @@ func (m *MainWidget) HandleAction(action Action) {
 	case MoveRight:
 		m.cursorX++
 	}
+
+	if m.hasTool {
+		m.currentTool.HandleAction(m, action)
+	}
 }
 
 func (m *MainWidget) HandleEvent(event tcell.Event) {
@@ -57,6 +68,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 		m.ScaleOffset(oldsw, oldsh, m.sw, m.sh)
 	case *tcell.EventMouse:
 		cx, cy := ev.Position()
+		cx, cy = cx-m.sx, cy-m.sy
 		m.cursorX, m.cursorY = cx, cy
 
 		if ev.Modifiers()&tcell.ModAlt != 0 &&
@@ -71,19 +83,42 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			m.offsetY += m.cursorY - m.panOriginY
 		}
 	case *tcell.EventKey:
-		if m.isPan {
-			m.offsetX += m.cursorX - m.panOriginX
-			m.offsetY += m.cursorY - m.panOriginY
-			m.panOriginX = m.cursorX
-			m.panOriginY = m.cursorY
-		}
 		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Key() == tcell.KeyF1 {
+			if m.isPan {
+				m.offsetX += m.cursorX - m.panOriginX
+				m.offsetY += m.cursorY - m.panOriginY
+				m.panOriginX = m.cursorX
+				m.panOriginY = m.cursorY
+			}
 			m.CenterCanvas()
+			return
 		}
+
+		if ev.Key() == tcell.KeyEscape {
+			if m.hasTool {
+				m.hasTool = false
+				m.currentTool = nil
+			} else {
+				m.app.WillQuit = true
+			}
+			return
+		}
+
+		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'b' {
+			m.SetTool(&BrushTool{currentIcon: '#'})
+			return
+		}
+	}
+
+	if m.hasTool {
+		m.currentTool.HandleEvent(m, event)
 	}
 }
 
 func (m *MainWidget) Update() {
+	if m.hasTool {
+		m.currentTool.Update(m)
+	}
 }
 
 func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
@@ -121,11 +156,14 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 		Height: m.canvas.Data.Height + 1,
 	}, tcell.StyleDefault)
 
-	p.SetRune(m.cursorX, m.cursorY, '#', nil, tcell.StyleDefault)
+	if m.hasTool {
+		m.currentTool.Draw(m, crop, x, y, w, h, lag)
+	}
 }
 
 func (m *MainWidget) ScreenResize(sw, sh int) {
 	m.sw, m.sh = sw-2, sh-2
+	m.sx, m.sy = 1, 1
 }
 
 func (m *MainWidget) ScaleOffset(oldsw, oldsh, newsw, newsh int) {
@@ -139,4 +177,9 @@ func (m *MainWidget) CenterCanvas() {
 	cw, ch := m.canvas.Data.Width, m.canvas.Data.Height
 	m.offsetX = (m.sw - cw) / 2
 	m.offsetY = (m.sh - ch) / 2
+}
+
+func (m *MainWidget) SetTool(tool Tool) {
+	m.hasTool = true
+	m.currentTool = tool
 }
