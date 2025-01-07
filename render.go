@@ -33,7 +33,12 @@ func (d DefaultPainter) SetByte(x, y int, v byte, style tcell.Style) {
 	Screen.SetContent(x, y, rune(v), nil, style)
 }
 
-func (d DefaultPainter) SetRune(x, y int, v rune, combining []rune, style tcell.Style) {
+func (d DefaultPainter) SetRune(
+	x, y int,
+	v rune,
+	combining []rune,
+	style tcell.Style,
+) {
 	Screen.SetContent(x, y, rune(v), combining, style)
 }
 
@@ -44,7 +49,12 @@ func (a *CropPainter) SetByte(x, y int, v byte, style tcell.Style) {
 	}
 }
 
-func (a *CropPainter) SetRune(x, y int, v rune, combining []rune, style tcell.Style) {
+func (a *CropPainter) SetRune(
+	x, y int,
+	v rune,
+	combining []rune,
+	style tcell.Style,
+) {
 	xx, yy := x+a.offsetBefore.X, y+a.offsetBefore.Y
 	if a.area.Contains(xx, yy) {
 		a.p.SetRune(xx+a.offsetAfter.X, yy+a.offsetAfter.Y, v, combining, style)
@@ -115,7 +125,13 @@ func SetGrid(p Painter, x, y int, grid Grid[rune], style tcell.Style) {
 	}
 }
 
-func FillRegion(p Painter, x, y int, width, height int, c rune, style tcell.Style) {
+func FillRegion(
+	p Painter,
+	x, y int,
+	width, height int,
+	c rune,
+	style tcell.Style,
+) {
 	for dy := 0; dy < height; dy++ {
 		for dx := 0; dx < width; dx++ {
 			p.SetRune(x+dx, y+dy, c, nil, style)
