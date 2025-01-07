@@ -33,8 +33,9 @@ var (
 	_ Widget = &MainWidget{}
 )
 
-func Init(screen tcell.Screen) *MainWidget {
+func Init(a *App, screen tcell.Screen) *MainWidget {
 	w := &MainWidget{
+		app:    a,
 		canvas: MakeBuffer(100, 60),
 	}
 

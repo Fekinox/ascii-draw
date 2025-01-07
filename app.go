@@ -71,7 +71,7 @@ func NewApp() *App {
 	app.Logger = log.New(app.LogFileHandle, "", log.Flags())
 
 	app.widget = NewMultiWidget(
-		Init(Screen),
+		Init(app, Screen),
 		&Monitor{},
 	)
 
@@ -107,9 +107,7 @@ func (a *App) Loop() {
 			case *tcell.EventResize:
 				Screen.Sync()
 			case *tcell.EventKey:
-				if ev.Key() == tcell.KeyEscape {
-					return
-				} else if ev.Key() == tcell.KeyCtrlL {
+				if ev.Key() == tcell.KeyCtrlL {
 					Screen.Sync()
 				} else {
 					var action Action
