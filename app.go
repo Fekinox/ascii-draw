@@ -71,7 +71,7 @@ func NewApp() *App {
 	app.Logger = log.New(app.LogFileHandle, "", log.Flags())
 
 	app.widget = NewMultiWidget(
-		Init(),
+		Init(Screen),
 		&Monitor{},
 	)
 
@@ -150,29 +150,16 @@ func (a *App) Draw(lag float64) {
 	Screen.Clear()
 
 	sw, sh := Screen.Size()
-	tw, th := sw-2, sh-2
 
-	if tw < MIN_WIDTH || th < MIN_HEIGHT {
-		ShowResizeScreen(tw, th, defStyle)
+	p := Paint
+
+	if sw < MIN_WIDTH || sh < MIN_HEIGHT {
+		ShowResizeScreen(p, sw, sh, defStyle)
 		Screen.Show()
 		return
 	}
 
-	rr := Area{
-		X:      (sw - tw) / 2,
-		Y:      (sh - th) / 2,
-		Width:  tw,
-		Height: th,
-	}
-
-	BorderBox(Area{
-		X:      rr.X - 1,
-		Y:      rr.Y - 1,
-		Width:  rr.Width + 1,
-		Height: rr.Height + 1,
-	}, defStyle)
-
-	a.widget.Draw(Screen, rr.X, rr.Y, rr.Width, rr.Height, lag)
+	a.widget.Draw(p, 0, 0, sw, sh, lag)
 
 	Screen.Show()
 }

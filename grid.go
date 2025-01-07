@@ -109,6 +109,14 @@ func (g *Grid[T]) Set(x, y int, val T) bool {
 	return true
 }
 
+func (g *Grid[T]) GetRef(x, y int) (*T, bool) {
+	if !g.InBounds(x, y) {
+		return nil, false
+	}
+
+	return &g.data[y*g.Width + x], true
+}
+
 func (g *Grid[T]) Resize(ox, oy int, neww, newh int, def T) Grid[T] {
 	return MakeGridWith(neww, newh, func(x, y int) T {
 		xx := x - ox

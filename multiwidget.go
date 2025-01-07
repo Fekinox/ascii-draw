@@ -33,8 +33,8 @@ func (m *MultiWidget) Update() {
 	}
 }
 
-func (m *MultiWidget) Draw(screen tcell.Screen, x, y, w, h int, lag float64) {
+func (m *MultiWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	for _, wd := range m.widgets {
-		wd.Draw(screen, x, y, w, h, lag)
+		wd.Draw(p, x, y, w, h, lag)
 	}
 }

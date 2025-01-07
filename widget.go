@@ -6,7 +6,7 @@ type Widget interface {
 	HandleAction(action Action)
 	HandleEvent(event tcell.Event)
 	Update()
-	Draw(screen tcell.Screen, x, y, w, h int, lag float64)
+	Draw(p Painter, x, y, w, h int, lag float64)
 }
 
 type ToggleableWidget struct {
@@ -28,8 +28,8 @@ func (t *ToggleableWidget) Update() {
 	}
 }
 
-func (t *ToggleableWidget) Draw(screen tcell.Screen, x, y, w, h int, lag float64) {
+func (t *ToggleableWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	if !t.disabled {
-		t.Widget.Draw(screen, x, y, w, h, lag)
+		t.Widget.Draw(p, x, y, w, h, lag)
 	}
 }

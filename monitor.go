@@ -26,11 +26,11 @@ func (m *Monitor) HandleEvent(event tcell.Event) {
 func (m *Monitor) Update() {
 }
 
-func (m *Monitor) Draw(screen tcell.Screen, x, y, w, h int, lag float64) {
+func (m *Monitor) Draw(p Painter, x, y, w, h int, lag float64) {
 	if m.hasLastAction {
-		SetString(x, y, fmt.Sprintf("Action: %v", m.lastAction), tcell.StyleDefault)
+		SetString(p, x, y, fmt.Sprintf("Action: %v", m.lastAction), tcell.StyleDefault)
 	}
 	if m.hasLastEvent {
-		SetString(x, y+1, fmt.Sprintf("Event: %v", m.lastEvent), tcell.StyleDefault)
+		SetString(p, x, y+1, fmt.Sprintf("Event: %v", m.lastEvent), tcell.StyleDefault)
 	}
 }
