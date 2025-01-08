@@ -69,12 +69,9 @@ func (t *TextWidget) Update() {
 func (t *TextWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	if t.Contents == "" {
 		st := tcell.StyleDefault.Foreground(tcell.ColorGray)
-		SetString(p, x, y, t.Hint, st)
-		return
+		SetString(p, x+1, y, t.Hint, st)
 	} else {
-		for i, c := range t.Contents {
-			p.SetRune(i+x, y, c, nil, tcell.StyleDefault)
-		}
+		SetString(p, x+1, y, t.Contents, tcell.StyleDefault)
 	}
-	p.SetStyle(x+t.Cursor, y, tcell.StyleDefault.Reverse(true))
+	p.SetStyle(x+1+t.Cursor, y, tcell.StyleDefault.Reverse(true))
 }

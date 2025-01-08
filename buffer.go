@@ -108,10 +108,9 @@ func (b *Buffer) Import(r io.Reader) error {
 	sc := bufio.NewScanner(r)
 	for sc.Scan() {
 		lines = append(lines, bytes.Clone(sc.Bytes()))
-	}
-
-	if err := sc.Err(); err != nil {
-		return err
+		if err := sc.Err(); err != nil {
+			return err
+		}
 	}
 
 	if len(lines) == 0 || len(lines[0]) == 0 {
@@ -130,15 +129,20 @@ func (b *Buffer) Import(r io.Reader) error {
 	return nil
 }
 
-func (b *Buffer) Export(w io.Writer) {
+func (b *Buffer) Export(w io.Writer) error {
 	for y := range b.Data.Height {
 		for x := range b.Data.Width {
-			fmt.Fprintf(w, "%c", b.Data.MustGet(x, y).Value)
+			if _, err := fmt.Fprintf(w, "%c", b.Data.MustGet(x, y).Value); err != nil {
+				return err
+			}
 		}
 		if y != b.Data.Height-1 {
-			fmt.Fprintf(w, "%c", '\n')
+			if _, err := fmt.Fprintf(w, "%c", '\n'); err != nil {
+				return err
+			}
 		}
 	}
+	return nil
 }
 
 func (b *Buffer) Load(r io.Reader) error {
@@ -168,11 +172,18 @@ func (b *Buffer) Load(r io.Reader) error {
 	b.Data = MakeGrid(int(width), int(height), Cell{})
 	for y := range int(height) {
 		for x := range int(width) {
-			var c Cell
-			if err := binary.Read(r, binary.BigEndian, &c); err != nil {
+			rf, _ := b.Data.GetRef(x, y)
+			var rawStyle [3]uint64
+			if err := binary.Read(r, binary.BigEndian, &rf.Value); err != nil {
 				return err
 			}
-			b.Data.Set(x, y, c)
+			if err := binary.Read(r, binary.BigEndian, &rawStyle); err != nil {
+				return err
+			}
+			rf.Style = tcell.StyleDefault.
+				Foreground(tcell.Color(rawStyle[0])).
+				Background(tcell.Color(rawStyle[1])).
+				Attributes(tcell.AttrMask(rawStyle[2]))
 		}
 	}
 	return nil
@@ -195,7 +206,13 @@ func (b *Buffer) Save(w io.Writer) error {
 
 	for y := range b.Data.Height {
 		for x := range b.Data.Width {
-			if err := binary.Write(w, binary.BigEndian, b.Data.MustGet(x, y)); err != nil {
+			c, _ := b.Data.GetRef(x, y)
+			fg, bg, attr := c.Style.Decompose()
+			vals := [3]uint64{uint64(fg), uint64(bg), uint64(attr)}
+			if err := binary.Write(w, binary.BigEndian, c.Value); err != nil {
+				return err
+			}
+			if err := binary.Write(w, binary.BigEndian, vals); err != nil {
 				return err
 			}
 		}

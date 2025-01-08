@@ -8,11 +8,11 @@ type PromptTool struct {
 	Text TextWidget
 }
 
-func MakePromptTool(onSubmit func(s string)) *PromptTool {
+func MakePromptTool(onSubmit func(s string), hint string) *PromptTool {
 	t := &PromptTool{
 		Text: TextWidget{
 			Active: true,
-			Hint:   "export path...",
+			Hint:   hint,
 		},
 	}
 

@@ -37,6 +37,7 @@ func (b *BrushTool) HandleEvent(m *MainWidget, event tcell.Event) {
 			// otherwise just place a stamp
 			dx, dy := cx-b.lastPosition.X, cy-b.lastPosition.Y
 			dist := max(max(dx, -dx), max(dy, -dy))
+			st := tcell.StyleDefault.Foreground(tcell.ColorRed)
 			if ev.When().Sub(b.lastPaint).Seconds() < 0.1 && dist > 1 {
 				positions := LinePositions(
 					b.lastPosition.X,
@@ -45,10 +46,10 @@ func (b *BrushTool) HandleEvent(m *MainWidget, event tcell.Event) {
 					cy,
 				)
 				for _, p := range positions {
-					m.canvas.Set(p.X, p.Y, b.currentIcon, tcell.StyleDefault)
+					m.canvas.Set(p.X, p.Y, b.currentIcon, st)
 				}
 			} else {
-				m.canvas.Set(cx, cy, b.currentIcon, tcell.StyleDefault)
+				m.canvas.Set(cx, cy, b.currentIcon, st)
 			}
 
 			b.lastPaint = ev.When()
@@ -66,9 +67,10 @@ func (b *BrushTool) Draw(
 	x, y, w, h int,
 	lag float64,
 ) {
+	SetString(p, x+1, y, "Brush Tool", tcell.StyleDefault)
 	p.SetRune(
-		m.cursorX,
-		m.cursorY,
+		m.cursorX+m.sx,
+		m.cursorY+m.sy,
 		rune(b.currentIcon),
 		nil,
 		tcell.StyleDefault,

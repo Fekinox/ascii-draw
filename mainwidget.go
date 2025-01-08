@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/gdamore/tcell/v2"
@@ -29,6 +30,8 @@ type MainWidget struct {
 
 	hasTool     bool
 	currentTool Tool
+
+	statusLine string
 }
 
 var (
@@ -112,23 +115,23 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			return
 		}
 
-		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'e' {
-			m.SetTool(MakePromptTool(m.Export))
+		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'x' {
+			m.SetTool(MakePromptTool(m.Export, "export path..."))
 			return
 		}
 
 		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'i' {
-			m.SetTool(MakePromptTool(m.Import))
+			m.SetTool(MakePromptTool(m.Import, "import path..."))
 			return
 		}
 
 		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 's' {
-			m.SetTool(MakePromptTool(m.Save))
+			m.SetTool(MakePromptTool(m.Save, "save path..."))
 			return
 		}
 
 		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'l' {
-			m.SetTool(MakePromptTool(m.Load))
+			m.SetTool(MakePromptTool(m.Load, "load path..."))
 			return
 		}
 	}
@@ -180,8 +183,12 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	}, tcell.StyleDefault)
 
 	if m.hasTool {
-		m.currentTool.Draw(m, crop, x, y, w, h, lag)
+		m.currentTool.Draw(m, p, x, y, w, h, lag)
+	} else {
+		SetString(p, x+1, y, "No Tool", tcell.StyleDefault)
 	}
+
+	SetCenteredString(p, x+w/2, y, m.statusLine, tcell.StyleDefault)
 }
 
 func (m *MainWidget) ScreenResize(sw, sh int) {
@@ -205,45 +212,95 @@ func (m *MainWidget) CenterCanvas() {
 func (m *MainWidget) SetTool(tool Tool) {
 	m.hasTool = true
 	m.currentTool = tool
+	m.statusLine = ""
 }
 
 func (m *MainWidget) ClearTool() {
 	m.hasTool = false
 	m.currentTool = nil
+	m.statusLine = ""
 }
 
 func (m *MainWidget) Export(s string) {
+	var msg string
+	defer func() {
+		m.ClearTool()
+		m.statusLine = msg
+		return
+	}()
+
 	f, err := os.Create(s)
 	if err != nil {
-		panic(err)
+		msg = err.Error()
+		return
 	}
-	m.canvas.Export(f)
-	m.ClearTool()
+	if err := m.canvas.Export(f); err != nil {
+		msg = err.Error()
+		return
+	}
+
+	msg = fmt.Sprintf("Successfully exported to plaintext file %s", s)
 }
 
 func (m *MainWidget) Import(s string) {
+	var msg string
+	defer func() {
+		m.ClearTool()
+		m.statusLine = msg
+		return
+	}()
+
 	f, err := os.Open(s)
 	if err != nil {
-		panic(err)
+		msg = err.Error()
+		return
 	}
-	m.canvas.Import(f)
-	m.ClearTool()
+	if err := m.canvas.Import(f); err != nil {
+		msg = err.Error()
+		return
+	}
+
+	msg = fmt.Sprintf("Successfully imported plaintext file %s", s)
 }
 
 func (m *MainWidget) Save(s string) {
+	var msg string
+	defer func() {
+		m.ClearTool()
+		m.statusLine = msg
+		return
+	}()
+
 	f, err := os.Create(s)
 	if err != nil {
-		panic(err)
+		msg = err.Error()
+		return
 	}
-	m.canvas.Save(f)
-	m.ClearTool()
+	if err := m.canvas.Save(f); err != nil {
+		msg = err.Error()
+		return
+	}
+
+	msg = fmt.Sprintf("Successfully saved %s", s)
 }
 
 func (m *MainWidget) Load(s string) {
+	var msg string
+	defer func() {
+		m.ClearTool()
+		m.statusLine = msg
+		return
+	}()
+
 	f, err := os.Open(s)
 	if err != nil {
-		panic(err)
+		msg = err.Error()
+		return
 	}
-	m.canvas.Load(f)
-	m.ClearTool()
+	if err := m.canvas.Load(f); err != nil {
+		msg = err.Error()
+		return
+	}
+
+	msg = fmt.Sprintf("Successfully loaded %s", s)
 }
