@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -111,7 +113,22 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 		}
 
 		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'e' {
-			m.SetTool(MakeExportTool(m))
+			m.SetTool(MakePromptTool(m.Export))
+			return
+		}
+
+		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'i' {
+			m.SetTool(MakePromptTool(m.Import))
+			return
+		}
+
+		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 's' {
+			m.SetTool(MakePromptTool(m.Save))
+			return
+		}
+
+		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'l' {
+			m.SetTool(MakePromptTool(m.Load))
 			return
 		}
 	}
@@ -188,4 +205,45 @@ func (m *MainWidget) CenterCanvas() {
 func (m *MainWidget) SetTool(tool Tool) {
 	m.hasTool = true
 	m.currentTool = tool
+}
+
+func (m *MainWidget) ClearTool() {
+	m.hasTool = false
+	m.currentTool = nil
+}
+
+func (m *MainWidget) Export(s string) {
+	f, err := os.Create(s)
+	if err != nil {
+		panic(err)
+	}
+	m.canvas.Export(f)
+	m.ClearTool()
+}
+
+func (m *MainWidget) Import(s string) {
+	f, err := os.Open(s)
+	if err != nil {
+		panic(err)
+	}
+	m.canvas.Import(f)
+	m.ClearTool()
+}
+
+func (m *MainWidget) Save(s string) {
+	f, err := os.Create(s)
+	if err != nil {
+		panic(err)
+	}
+	m.canvas.Save(f)
+	m.ClearTool()
+}
+
+func (m *MainWidget) Load(s string) {
+	f, err := os.Open(s)
+	if err != nil {
+		panic(err)
+	}
+	m.canvas.Load(f)
+	m.ClearTool()
 }
