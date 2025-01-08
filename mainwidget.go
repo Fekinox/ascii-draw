@@ -111,7 +111,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 		}
 	}
 
-	if m.hasTool {
+	if !m.isPan && m.hasTool {
 		m.currentTool.HandleEvent(m, event)
 	}
 }
