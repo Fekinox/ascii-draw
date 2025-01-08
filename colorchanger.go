@@ -64,7 +64,7 @@ func (c *ColorSelectorTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag f
 	}
 	for i := range 8 {
 		xx, yy := i%4, i/4
-		color := tcell.Color(i+8) + tcell.ColorValid
+		color := tcell.Color(i) + tcell.ColorValid
 
 		var st tcell.Style
 		if c.selFg == -1 {
@@ -78,7 +78,7 @@ func (c *ColorSelectorTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag f
 
 	for i := range 8 {
 		xx, yy := i%4, i/4
-		color := tcell.Color(i) + tcell.ColorValid
+		color := tcell.Color(i+8) + tcell.ColorValid
 
 		var st tcell.Style
 		if c.selFg == -1 {
