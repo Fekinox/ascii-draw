@@ -63,7 +63,7 @@ func NewApp() *App {
 
 	app.widget = NewMultiWidget(
 		Init(app, Screen),
-		&Monitor{},
+		// &Monitor{},
 	)
 
 	return app

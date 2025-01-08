@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -27,21 +28,12 @@ func (m *Monitor) Update() {
 }
 
 func (m *Monitor) Draw(p Painter, x, y, w, h int, lag float64) {
-	if m.hasLastAction {
-		SetString(
-			p,
-			x,
-			y+3,
-			fmt.Sprintf("Action: %v", m.lastAction),
-			tcell.StyleDefault,
-		)
-	}
 	if m.hasLastEvent {
 		SetString(
 			p,
 			x,
 			y+4,
-			fmt.Sprintf("Event: %v", m.lastEvent),
+			fmt.Sprintf("Event: %v %v", m.lastEvent, reflect.TypeOf(m.lastEvent)),
 			tcell.StyleDefault,
 		)
 	}

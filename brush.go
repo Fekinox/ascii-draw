@@ -37,7 +37,7 @@ func (b *BrushTool) HandleEvent(m *MainWidget, event tcell.Event) {
 			// otherwise just place a stamp
 			dx, dy := cx-b.lastPosition.X, cy-b.lastPosition.Y
 			dist := max(max(dx, -dx), max(dy, -dy))
-			st := tcell.StyleDefault.Foreground(tcell.ColorRed)
+			st := tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor)
 			if ev.When().Sub(b.lastPaint).Seconds() < 0.1 && dist > 1 {
 				positions := LinePositions(
 					b.lastPosition.X,
@@ -73,6 +73,6 @@ func (b *BrushTool) Draw(
 		m.cursorY+m.sy,
 		rune(b.currentIcon),
 		nil,
-		tcell.StyleDefault,
+		tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
 	)
 }

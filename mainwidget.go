@@ -32,6 +32,9 @@ type MainWidget struct {
 	currentTool Tool
 
 	statusLine string
+
+	fgColor tcell.Color
+	bgColor tcell.Color
 }
 
 var (
@@ -59,10 +62,6 @@ func (m *MainWidget) HandleAction(action Action) {
 		m.cursorX--
 	case MoveRight:
 		m.cursorX++
-	}
-
-	if m.hasTool {
-		m.currentTool.HandleAction(m, action)
 	}
 }
 
@@ -134,6 +133,11 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			m.SetTool(MakePromptTool(m.Load, "load path..."))
 			return
 		}
+
+		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'c' {
+			m.SetTool(MakeColorSelectorTool())
+			return
+		}
 	}
 
 	if !m.isPan && m.hasTool {
@@ -189,6 +193,28 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	}
 
 	SetCenteredString(p, x+w/2, y, m.statusLine, tcell.StyleDefault)
+
+	// color indicators
+	SetString(p, x+w-10, y, "fg: ", tcell.StyleDefault)
+	if m.fgColor == 0 {
+		p.SetByte(x+w-7, y, '_', tcell.StyleDefault)
+	} else {
+		var c byte = 'b'
+		if m.fgColor <= tcell.ColorGray {
+			c = 'n'
+		}
+		p.SetByte(x+w-7, y, c, tcell.StyleDefault.Background(m.fgColor))
+	}
+	SetString(p, x+w-5, y, "bg: ", tcell.StyleDefault)
+	if m.bgColor == 0 {
+		p.SetByte(x+w-2, y, '_', tcell.StyleDefault)
+	} else {
+		var c byte = 'b'
+		if m.bgColor <= tcell.ColorGray {
+			c = 'n'
+		}
+		p.SetByte(x+w-2, y, c, tcell.StyleDefault.Background(m.bgColor))
+	}
 }
 
 func (m *MainWidget) ScreenResize(sw, sh int) {
@@ -219,6 +245,20 @@ func (m *MainWidget) ClearTool() {
 	m.hasTool = false
 	m.currentTool = nil
 	m.statusLine = ""
+}
+
+func (m *MainWidget) SetColor(fg, bg int) {
+	if fg == 16 {
+		m.fgColor = tcell.ColorDefault
+	} else {
+		m.fgColor = tcell.ColorValid + tcell.Color(fg)
+	}
+
+	if bg == 16 {
+		m.bgColor = tcell.ColorDefault
+	} else {
+		m.bgColor = tcell.ColorValid + tcell.Color(bg)
+	}
 }
 
 func (m *MainWidget) Export(s string) {
