@@ -15,33 +15,40 @@ type CellColor byte
 
 const magicNumber int64 = 0xdeadbeef
 
-const (
-	DefaultColor = 0
-	ValidColor   = 1 << 4
-)
-
-const (
-	ColorBlack = ValidColor + iota
-	ColorMaroon
-	ColorGreen
-	ColorOlive
-	ColorNavy
-	ColorPurple
-	ColorTeal
-	ColorSilver
-	ColorGray
-	ColorRed
-	ColorLime
-	ColorYellow
-	ColorBlue
-	ColorFuchsia
-	ColorAqua
-	ColorWhite
-)
-
 type Cell struct {
 	Value byte
 	Style tcell.Style
+}
+
+func Encode(c *Cell) uint16 {
+	choppedValue := uint16(c.Value & 127)
+	fg, bg, _ := c.Style.Decompose()
+	var fgc, bgc uint16
+	if fg == tcell.ColorDefault {
+		fgc = 16
+	} else {
+		fgc = uint16(fg - tcell.ColorValid)
+	}
+	if bg == tcell.ColorDefault {
+		bgc = 16
+	} else {
+		bgc = uint16(bg - tcell.ColorValid)
+	}
+	return choppedValue + ((fgc + bgc*17) << 7)
+}
+
+func Decode(u uint16, c *Cell) {
+	c.Value = byte(u & 127)
+	u = u >> 7
+	fgc, bgc := u%17, u/17
+	var fg, bg tcell.Color
+	if fgc != 16 {
+		fg = tcell.Color(fgc) + tcell.ColorValid
+	}
+	if bgc != 16 {
+		bg = tcell.Color(bgc) + tcell.ColorValid
+	}
+	c.Style = c.Style.Foreground(fg).Background(bg)
 }
 
 type Buffer struct {
@@ -172,18 +179,12 @@ func (b *Buffer) Load(r io.Reader) error {
 	b.Data = MakeGrid(int(width), int(height), Cell{})
 	for y := range int(height) {
 		for x := range int(width) {
+			var u uint16
+			if err := binary.Read(r, binary.BigEndian, &u); err != nil {
+				return err
+			}
 			rf, _ := b.Data.GetRef(x, y)
-			var rawStyle [3]uint64
-			if err := binary.Read(r, binary.BigEndian, &rf.Value); err != nil {
-				return err
-			}
-			if err := binary.Read(r, binary.BigEndian, &rawStyle); err != nil {
-				return err
-			}
-			rf.Style = tcell.StyleDefault.
-				Foreground(tcell.Color(rawStyle[0])).
-				Background(tcell.Color(rawStyle[1])).
-				Attributes(tcell.AttrMask(rawStyle[2]))
+			Decode(u, rf)
 		}
 	}
 	return nil
@@ -207,12 +208,7 @@ func (b *Buffer) Save(w io.Writer) error {
 	for y := range b.Data.Height {
 		for x := range b.Data.Width {
 			c, _ := b.Data.GetRef(x, y)
-			fg, bg, attr := c.Style.Decompose()
-			vals := [3]uint64{uint64(fg), uint64(bg), uint64(attr)}
-			if err := binary.Write(w, binary.BigEndian, c.Value); err != nil {
-				return err
-			}
-			if err := binary.Write(w, binary.BigEndian, vals); err != nil {
+			if err := binary.Write(w, binary.BigEndian, Encode(c)); err != nil {
 				return err
 			}
 		}
