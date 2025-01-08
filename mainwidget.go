@@ -33,8 +33,9 @@ type MainWidget struct {
 
 	statusLine string
 
-	fgColor tcell.Color
-	bgColor tcell.Color
+	brushCharacter byte
+	fgColor        tcell.Color
+	bgColor        tcell.Color
 }
 
 var (
@@ -44,7 +45,7 @@ var (
 func Init(a *App, screen tcell.Screen) *MainWidget {
 	w := &MainWidget{
 		app:    a,
-		canvas: MakeBuffer(100, 60),
+		canvas: MakeBuffer(10, 6),
 	}
 
 	w.ScreenResize(screen.Size())
@@ -138,6 +139,11 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			m.SetTool(MakeColorSelectorTool())
 			return
 		}
+
+		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'p' {
+			m.SetTool(MakeColorPickerTool())
+			return
+		}
 	}
 
 	if !m.isPan && m.hasTool {
@@ -146,9 +152,6 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 }
 
 func (m *MainWidget) Update() {
-	if m.hasTool {
-		m.currentTool.Update(m)
-	}
 }
 
 func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
@@ -182,8 +185,8 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	BorderBox(crop, Area{
 		X:      canvasOffX - 1,
 		Y:      canvasOffY - 1,
-		Width:  m.canvas.Data.Width + 1,
-		Height: m.canvas.Data.Height + 1,
+		Width:  m.canvas.Data.Width + 2,
+		Height: m.canvas.Data.Height + 2,
 	}, tcell.StyleDefault)
 
 	if m.hasTool {
@@ -194,7 +197,9 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 
 	SetCenteredString(p, x+w/2, y, m.statusLine, tcell.StyleDefault)
 
-	// color indicators
+	// color/char indicators
+	SetString(p, x+w-17, y, "char: ", tcell.StyleDefault)
+	p.SetByte(x+w-12, y, m.brushCharacter, tcell.StyleDefault)
 	SetString(p, x+w-10, y, "fg: ", tcell.StyleDefault)
 	if m.fgColor == 0 {
 		p.SetByte(x+w-7, y, '_', tcell.StyleDefault)
