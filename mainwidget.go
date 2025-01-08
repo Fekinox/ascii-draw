@@ -109,6 +109,11 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			m.SetTool(&BrushTool{currentIcon: '#'})
 			return
 		}
+
+		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'e' {
+			m.SetTool(MakeExportTool(m))
+			return
+		}
 	}
 
 	if !m.isPan && m.hasTool {

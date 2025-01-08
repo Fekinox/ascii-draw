@@ -53,15 +53,6 @@ func NewApp() *App {
 		runeActionMap: make(map[rune]Action),
 	}
 
-	app.keyActionMap[tcell.KeyLeft] = MoveLeft
-	app.keyActionMap[tcell.KeyRight] = MoveRight
-	app.keyActionMap[tcell.KeyUp] = MoveUp
-	app.keyActionMap[tcell.KeyDown] = MoveDown
-	app.keyActionMap[tcell.KeyEnter] = MenuConfirm
-
-	app.runeActionMap['q'] = Quit
-	app.runeActionMap['Q'] = Quit
-
 	// Initialize logger
 	app.LogFileHandle, err = os.Create("logfile")
 	if err != nil {

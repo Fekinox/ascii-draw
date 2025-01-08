@@ -1,10 +1,19 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
+	"encoding/binary"
+	"errors"
+	"fmt"
+	"io"
+
 	"github.com/gdamore/tcell/v2"
 )
 
 type CellColor byte
+
+const magicNumber int64 = 0xdeadbeef
 
 const (
 	DefaultColor = 0
@@ -92,4 +101,105 @@ func (b *Buffer) SetString(x int, y int, s []byte, st tcell.Style) {
 			Style: st,
 		})
 	}
+}
+
+func (b *Buffer) Import(r io.Reader) error {
+	var lines [][]byte
+	sc := bufio.NewScanner(r)
+	for sc.Scan() {
+		lines = append(lines, bytes.Clone(sc.Bytes()))
+	}
+
+	if err := sc.Err(); err != nil {
+		return err
+	}
+
+	if len(lines) == 0 || len(lines[0]) == 0 {
+		return errors.New("Empty data")
+	}
+
+	b.Data = MakeGrid(len(lines[0]), len(lines), Cell{})
+
+	for y := range b.Data.Height {
+		for x := range b.Data.Width {
+			c, _ := b.Data.GetRef(x, y)
+			c.Value = lines[y][x]
+		}
+	}
+
+	return nil
+}
+
+func (b *Buffer) Export(w io.Writer) {
+	for y := range b.Data.Height {
+		for x := range b.Data.Width {
+			fmt.Fprintf(w, "%c", b.Data.MustGet(x, y).Value)
+		}
+		if y != b.Data.Height-1 {
+			fmt.Fprintf(w, "%c", '\n')
+		}
+	}
+}
+
+func (b *Buffer) Load(r io.Reader) error {
+	var magic int64
+
+	if err := binary.Read(r, binary.BigEndian, &magic); err != nil {
+		return err
+	}
+	if magic != magicNumber {
+		return errors.New("Invalid magic number")
+	}
+
+	var width, height int32
+
+	if err := binary.Read(r, binary.BigEndian, &width); err != nil {
+		return err
+	}
+
+	if err := binary.Read(r, binary.BigEndian, &height); err != nil {
+		return err
+	}
+
+	if width <= 0 || height <= 0 {
+		return errors.New("Width and height must be positive")
+	}
+
+	b.Data = MakeGrid(int(width), int(height), Cell{})
+	for y := range int(height) {
+		for x := range int(width) {
+			var c Cell
+			if err := binary.Read(r, binary.BigEndian, &c); err != nil {
+				return err
+			}
+			b.Data.Set(x, y, c)
+		}
+	}
+	return nil
+}
+
+func (b *Buffer) Save(w io.Writer) error {
+	if err := binary.Write(w, binary.BigEndian, magicNumber); err != nil {
+		return err
+	}
+
+	width, height := int32(b.Data.Width), int32(b.Data.Height)
+
+	if err := binary.Write(w, binary.BigEndian, width); err != nil {
+		return err
+	}
+
+	if err := binary.Write(w, binary.BigEndian, height); err != nil {
+		return err
+	}
+
+	for y := range b.Data.Height {
+		for x := range b.Data.Width {
+			if err := binary.Write(w, binary.BigEndian, b.Data.MustGet(x, y)); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }

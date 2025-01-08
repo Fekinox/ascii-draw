@@ -31,7 +31,7 @@ func (m *Monitor) Draw(p Painter, x, y, w, h int, lag float64) {
 		SetString(
 			p,
 			x,
-			y,
+			y+3,
 			fmt.Sprintf("Action: %v", m.lastAction),
 			tcell.StyleDefault,
 		)
@@ -40,7 +40,7 @@ func (m *Monitor) Draw(p Painter, x, y, w, h int, lag float64) {
 		SetString(
 			p,
 			x,
-			y+1,
+			y+4,
 			fmt.Sprintf("Event: %v", m.lastEvent),
 			tcell.StyleDefault,
 		)

@@ -1,9 +1,15 @@
 package main
 
-import "github.com/gdamore/tcell/v2"
+import (
+	"time"
+
+	"github.com/gdamore/tcell/v2"
+)
 
 type BrushTool struct {
-	currentIcon byte
+	currentIcon  byte
+	lastPaint    time.Time
+	lastPosition Position
 }
 
 var (
@@ -26,7 +32,27 @@ func (b *BrushTool) HandleEvent(m *MainWidget, event tcell.Event) {
 			cx, cy := ev.Position()
 			cx, cy = cx-m.sx-m.offsetX, cy-m.sy-m.offsetY
 
-			m.canvas.Set(cx, cy, b.currentIcon, tcell.StyleDefault)
+			// if last paint time is sufficiently small and the distance is big enough,
+			// draw a line
+			// otherwise just place a stamp
+			dx, dy := cx-b.lastPosition.X, cy-b.lastPosition.Y
+			dist := max(max(dx, -dx), max(dy, -dy))
+			if ev.When().Sub(b.lastPaint).Seconds() < 0.1 && dist > 1 {
+				positions := LinePositions(
+					b.lastPosition.X,
+					b.lastPosition.Y,
+					cx,
+					cy,
+				)
+				for _, p := range positions {
+					m.canvas.Set(p.X, p.Y, b.currentIcon, tcell.StyleDefault)
+				}
+			} else {
+				m.canvas.Set(cx, cy, b.currentIcon, tcell.StyleDefault)
+			}
+
+			b.lastPaint = ev.When()
+			b.lastPosition = Position{X: cx, Y: cy}
 		}
 	}
 }
