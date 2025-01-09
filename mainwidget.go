@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -15,6 +16,26 @@ const (
 	ColorPickDrag
 )
 
+type ColorSelectState int
+
+const (
+	ColorSelectNone ColorSelectState = iota
+	ColorSelectFg
+	ColorSelectBg
+)
+
+var colorMap = map[rune]int{
+	'1': 0, '!': 8,
+	'2': 1, '@': 9,
+	'3': 2, '#': 10,
+	'4': 3, '$': 11,
+	'5': 4, '%': 12,
+	'6': 5, '^': 13,
+	'7': 6, '&': 14,
+	'8': 7, '*': 15,
+	'`': 16,
+}
+
 type MainWidget struct {
 	app *App
 
@@ -23,8 +44,11 @@ type MainWidget struct {
 	sw int
 	sh int
 
-	cursorX int
-	cursorY int
+	cursorX     int
+	cursorY     int
+	lastCursorX int
+	lastCursorY int
+	lastPaint   time.Time
 
 	// Position of top-left corner of buffer
 	offsetX int
@@ -43,6 +67,8 @@ type MainWidget struct {
 	hoverFg          tcell.Color
 	hoverBg          tcell.Color
 
+	colorSelectState ColorSelectState
+
 	hasTool     bool
 	currentTool Tool
 
@@ -59,8 +85,9 @@ var (
 
 func Init(a *App, screen tcell.Screen) *MainWidget {
 	w := &MainWidget{
-		app:    a,
-		canvas: MakeBuffer(10, 6),
+		app:            a,
+		canvas:         MakeBuffer(100, 60),
+		brushCharacter: '#',
 	}
 
 	w.ScreenResize(screen.Size())
@@ -148,6 +175,34 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			}
 			m.colorPickState = ColorPickNone
 		}
+
+		if ev.Buttons()&tcell.Button1 != 0 {
+			cx, cy := ev.Position()
+			cx, cy = cx-m.sx-m.offsetX, cy-m.sy-m.offsetY
+
+			// if last paint time is sufficiently small and the distance is big enough,
+			// draw a line
+			// otherwise just place a stamp
+			dx, dy := cx-m.lastCursorX, cy-m.lastCursorY
+			dist := max(max(dx, -dx), max(dy, -dy))
+			st := tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor)
+			if ev.When().Sub(m.lastPaint).Seconds() < 0.1 && dist > 1 {
+				positions := LinePositions(
+					m.lastCursorX,
+					m.lastCursorY,
+					cx,
+					cy,
+				)
+				for _, p := range positions {
+					m.canvas.Set(p.X, p.Y, m.brushCharacter, st)
+				}
+			} else {
+				m.canvas.Set(cx, cy, m.brushCharacter, st)
+			}
+
+			m.lastPaint = ev.When()
+			m.lastCursorX, m.lastCursorY = cx, cy
+		}
 	case *tcell.EventKey:
 		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Key() == tcell.KeyF1 {
 			if m.isPan {
@@ -170,8 +225,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			return
 		}
 
-		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'b' {
-			m.SetTool(&BrushTool{currentIcon: '#'})
+		if ev.Key() != tcell.KeyRune {
 			return
 		}
 
@@ -195,10 +249,44 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			return
 		}
 
-		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'c' {
-			m.SetTool(MakeColorSelectorTool())
+		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'f' {
+			m.colorSelectState = ColorSelectFg
 			return
 		}
+
+		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'g' {
+			m.colorSelectState = ColorSelectBg
+			return
+		}
+
+		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'n' {
+			m.canvas = MakeBuffer(m.canvas.Data.Width, m.canvas.Data.Height)
+			return
+		}
+
+		if m.colorSelectState == ColorSelectFg {
+			m.colorSelectState = ColorSelectNone
+			r := ev.Rune()
+			newColor, ok := colorMap[r]
+			if !ok {
+				return
+			}
+
+			m.SetFgColor(newColor)
+		}
+
+		if m.colorSelectState == ColorSelectBg {
+			m.colorSelectState = ColorSelectNone
+			r := ev.Rune()
+			newColor, ok := colorMap[r]
+			if !ok {
+				return
+			}
+
+			m.SetBgColor(newColor)
+		}
+
+		m.brushCharacter = byte(ev.Rune())
 	}
 
 	if !m.isPan && m.hasTool {
@@ -290,6 +378,45 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 			p, cx, cy, m.colorPickOriginX+m.sx, m.colorPickOriginY+m.sy,
 		)
 	}
+
+	// color selector
+	if m.colorSelectState != ColorSelectNone {
+		if m.colorSelectState == ColorSelectFg {
+			SetString(p, x+1, y, "fg: ", tcell.StyleDefault)
+		} else {
+			SetString(p, x+1, y, "bg: ", tcell.StyleDefault)
+		}
+
+		for i := range 8 {
+			xx, yy := i%4, i/4
+			color := tcell.Color(i) + tcell.ColorValid
+
+			var st tcell.Style
+			if m.colorSelectState == ColorSelectFg {
+				st = st.Foreground(color)
+			} else {
+				st = st.Background(color).Foreground(tcell.ColorBlack)
+			}
+
+			SetString(p, x+5+xx*4, y+yy*2, fmt.Sprintf(" %d ", i+1), st)
+		}
+
+		for i := range 8 {
+			xx, yy := i%4, i/4
+			color := tcell.Color(i+8) + tcell.ColorValid
+
+			var st tcell.Style
+			if m.colorSelectState == ColorSelectFg {
+				st = st.Foreground(color)
+			} else {
+				st = st.Background(color).Foreground(tcell.ColorBlack)
+			}
+
+			SetString(p, x+5+xx*4, y+yy*2+1, fmt.Sprintf("s+%d", i+1), st)
+		}
+
+		SetString(p, x+5+16, y, " ` ", tcell.StyleDefault)
+	}
 }
 
 func (m *MainWidget) ScreenResize(sw, sh int) {
@@ -322,13 +449,15 @@ func (m *MainWidget) ClearTool() {
 	m.statusLine = ""
 }
 
-func (m *MainWidget) SetColor(fg, bg int) {
+func (m *MainWidget) SetFgColor(fg int) {
 	if fg == 16 {
 		m.fgColor = tcell.ColorDefault
 	} else {
 		m.fgColor = tcell.ColorValid + tcell.Color(fg)
 	}
+}
 
+func (m *MainWidget) SetBgColor(bg int) {
 	if bg == 16 {
 		m.bgColor = tcell.ColorDefault
 	} else {
