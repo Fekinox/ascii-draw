@@ -77,7 +77,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 		cx, cy = cx-m.sx, cy-m.sy
 		m.cursorX, m.cursorY = cx, cy
 
-		if ev.Modifiers()&tcell.ModAlt != 0 &&
+		if ev.Modifiers()&tcell.ModCtrl != 0 &&
 			ev.Buttons()&tcell.Button1 != 0 {
 			if !m.isPan {
 				m.isPan = true
