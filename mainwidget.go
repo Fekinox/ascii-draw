@@ -7,6 +7,14 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+type ColorPickState int
+
+const (
+	ColorPickNone ColorPickState = iota
+	ColorPickHover
+	ColorPickDrag
+)
+
 type MainWidget struct {
 	app *App
 
@@ -27,6 +35,13 @@ type MainWidget struct {
 	isPan      bool
 	panOriginX int
 	panOriginY int
+
+	colorPickState   ColorPickState
+	colorPickOriginX int
+	colorPickOriginY int
+	hoverChar        byte
+	hoverFg          tcell.Color
+	hoverBg          tcell.Color
 
 	hasTool     bool
 	currentTool Tool
@@ -83,10 +98,55 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				m.isPan = true
 				m.panOriginX, m.panOriginY = cx, cy
 			}
+			return
 		} else if m.isPan {
 			m.isPan = false
 			m.offsetX += m.cursorX - m.panOriginX
 			m.offsetY += m.cursorY - m.panOriginY
+		}
+
+		if ev.Modifiers()&tcell.ModAlt != 0 {
+			if m.colorPickState != ColorPickDrag {
+				m.colorPickState = ColorPickHover
+				canvasX, canvasY := cx-m.offsetX, cy-m.offsetY
+
+				if m.canvas.Data.InBounds(canvasX, canvasY) {
+					cell := m.canvas.Data.MustGet(canvasX, canvasY)
+					m.hoverChar = cell.Value
+					m.hoverFg, m.hoverBg, _ = cell.Style.Decompose()
+				}
+
+				if ev.Buttons()&tcell.Button1 != 0 {
+					m.colorPickState = ColorPickDrag
+					m.colorPickOriginX = m.cursorX
+					m.colorPickOriginY = m.cursorY
+				}
+			} else {
+				if ev.Buttons()&tcell.Button1 == 0 {
+					offsetY := m.cursorY - m.colorPickOriginY
+					if offsetY < -2 {
+						m.fgColor = m.hoverFg
+					} else if offsetY > 2 {
+						m.bgColor = m.hoverBg
+					} else {
+						m.brushCharacter = m.hoverChar
+					}
+					m.colorPickState = ColorPickHover
+				}
+			}
+			return
+		} else {
+			if m.colorPickState == ColorPickDrag {
+				offsetY := m.cursorX - m.colorPickOriginY
+				if offsetY < -2 {
+					m.fgColor = m.hoverFg
+				} else if offsetY > 2 {
+					m.bgColor = m.hoverBg
+				} else {
+					m.brushCharacter = m.hoverChar
+				}
+			}
+			m.colorPickState = ColorPickNone
 		}
 	case *tcell.EventKey:
 		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Key() == tcell.KeyF1 {
@@ -137,11 +197,6 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 
 		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'c' {
 			m.SetTool(MakeColorSelectorTool())
-			return
-		}
-
-		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'p' {
-			m.SetTool(MakeColorPickerTool())
 			return
 		}
 	}
@@ -219,6 +274,21 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 			c = 'n'
 		}
 		p.SetByte(x+w-2, y, c, tcell.StyleDefault.Background(m.bgColor))
+	}
+
+	// color picker
+	if m.colorPickState == ColorPickHover {
+		cx, cy := m.cursorX+m.sx, m.cursorY+m.sy
+		DrawColorPickerState(
+			p, cx, cy,
+			true, false, false,
+			m.hoverChar, m.hoverFg, m.hoverBg,
+		)
+	} else if m.colorPickState == ColorPickDrag {
+		cx, cy := m.cursorX+m.sx, m.cursorY+m.sy
+		DrawDragIndicator(
+			p, cx, cy, m.colorPickOriginX+m.sx, m.colorPickOriginY+m.sy,
+		)
 	}
 }
 

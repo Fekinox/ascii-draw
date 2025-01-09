@@ -272,3 +272,79 @@ func DrawLine(p Painter, ax, ay, bx, by int) {
 		drawLineHigh(p, ax, ay, bx, by)
 	}
 }
+
+func DrawColorPickerState(
+	p Painter,
+	x, y int,
+	copyChar, copyFg, copyBg bool,
+	hoverChar byte, hoverFg, hoverBg tcell.Color,
+) {
+	rect := Area{
+		X:      x,
+		Y:      y - 5,
+		Width:  8,
+		Height: 5,
+	}
+
+	// char
+	p.SetByte(x+1, y-4, hoverChar, tcell.StyleDefault)
+	SetString(p, x+2, y-4, " char  ", tcell.StyleDefault)
+
+	// fg
+	if hoverFg == 0 {
+		p.SetByte(x+1, y-3, '_', tcell.StyleDefault)
+	} else {
+		var ch byte = 'b'
+		if hoverFg <= tcell.ColorGray {
+			ch = 'n'
+		}
+		p.SetByte(x+1, y-3, ch, tcell.StyleDefault.Background(hoverFg))
+	}
+	SetString(p, x+2, y-3, " fg    ", tcell.StyleDefault)
+
+	// bg
+	if hoverBg == 0 {
+		p.SetByte(x+1, y-2, '_', tcell.StyleDefault)
+	} else {
+		var ch byte = 'b'
+		if hoverBg <= tcell.ColorGray {
+			ch = 'n'
+		}
+		p.SetByte(x+1, y-2, ch, tcell.StyleDefault.Background(hoverBg))
+	}
+	SetString(p, x+2, y-2, " bg    ", tcell.StyleDefault)
+
+	BorderBox(p, rect, tcell.StyleDefault)
+}
+
+func DrawDragIndicator(
+	p Painter,
+	x, y, orx, ory int,
+) {
+	origRect := Area{
+		X:      orx - 3,
+		Y:      ory - 2,
+		Width:  7,
+		Height: 5,
+	}
+	indRect := Area{
+		X:      x + 2,
+		Y:      y - 1,
+		Width:  10,
+		Height: 3,
+	}
+	offset := y - ory
+
+	var s string
+	if offset < -2 {
+		s = "set fg"
+	} else if offset > 2 {
+		s = "set bg"
+	} else {
+		s = "set char"
+	}
+
+	BorderBox(p, origRect, tcell.StyleDefault)
+	SetString(p, x+3, y, s, tcell.StyleDefault)
+	BorderBox(p, indRect, tcell.StyleDefault)
+}

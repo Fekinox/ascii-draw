@@ -56,7 +56,12 @@ func (c *ColorSelectorTool) HandleEvent(m *MainWidget, event tcell.Event) {
 func (c *ColorSelectorTool) Update(m *MainWidget) {
 }
 
-func (c *ColorSelectorTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
+func (c *ColorSelectorTool) Draw(
+	m *MainWidget,
+	p Painter,
+	x, y, w, h int,
+	lag float64,
+) {
 	if c.selFg == -1 {
 		SetString(p, x+1, y, "fg: ", tcell.StyleDefault)
 	} else {

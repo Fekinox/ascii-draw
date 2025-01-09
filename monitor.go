@@ -33,7 +33,11 @@ func (m *Monitor) Draw(p Painter, x, y, w, h int, lag float64) {
 			p,
 			x,
 			y+4,
-			fmt.Sprintf("Event: %v %v", m.lastEvent, reflect.TypeOf(m.lastEvent)),
+			fmt.Sprintf(
+				"Event: %v %v",
+				m.lastEvent,
+				reflect.TypeOf(m.lastEvent),
+			),
 			tcell.StyleDefault,
 		)
 	}
