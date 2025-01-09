@@ -225,68 +225,62 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			return
 		}
 
-		if ev.Key() != tcell.KeyRune {
-			return
-		}
-
-		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'x' {
-			m.SetTool(MakePromptTool(m.Export, "export path..."))
-			return
-		}
-
-		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'i' {
-			m.SetTool(MakePromptTool(m.Import, "import path..."))
-			return
-		}
-
-		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 's' {
-			m.SetTool(MakePromptTool(m.Save, "save path..."))
-			return
-		}
-
-		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'l' {
-			m.SetTool(MakePromptTool(m.Load, "load path..."))
-			return
-		}
-
-		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'f' {
-			m.colorSelectState = ColorSelectFg
-			return
-		}
-
-		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'g' {
-			m.colorSelectState = ColorSelectBg
-			return
-		}
-
-		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'n' {
-			m.canvas = MakeBuffer(m.canvas.Data.Width, m.canvas.Data.Height)
-			return
-		}
-
-		if m.colorSelectState == ColorSelectFg {
-			m.colorSelectState = ColorSelectNone
-			r := ev.Rune()
-			newColor, ok := colorMap[r]
-			if !ok {
+		if ev.Key() == tcell.KeyRune {
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'x' {
+				m.SetTool(MakePromptTool(m.Export, "export path..."))
 				return
 			}
 
-			m.SetFgColor(newColor)
-		}
-
-		if m.colorSelectState == ColorSelectBg {
-			m.colorSelectState = ColorSelectNone
-			r := ev.Rune()
-			newColor, ok := colorMap[r]
-			if !ok {
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'i' {
+				m.SetTool(MakePromptTool(m.Import, "import path..."))
 				return
 			}
 
-			m.SetBgColor(newColor)
-		}
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 's' {
+				m.SetTool(MakePromptTool(m.Save, "save path..."))
+				return
+			}
 
-		m.brushCharacter = byte(ev.Rune())
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'l' {
+				m.SetTool(MakePromptTool(m.Load, "load path..."))
+				return
+			}
+
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'f' {
+				m.colorSelectState = ColorSelectFg
+				return
+			}
+
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'g' {
+				m.colorSelectState = ColorSelectBg
+				return
+			}
+
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'n' {
+				m.canvas = MakeBuffer(m.canvas.Data.Width, m.canvas.Data.Height)
+				return
+			}
+
+			if m.colorSelectState == ColorSelectFg {
+				m.colorSelectState = ColorSelectNone
+				r := ev.Rune()
+				if newColor, ok := colorMap[r]; ok {
+					m.SetFgColor(newColor)
+				}
+				return
+			}
+
+			if m.colorSelectState == ColorSelectBg {
+				m.colorSelectState = ColorSelectNone
+				r := ev.Rune()
+				if newColor, ok := colorMap[r]; ok {
+					m.SetBgColor(newColor)
+				}
+				return
+			}
+		} else {
+			m.brushCharacter = byte(ev.Rune())
+		}
 	}
 
 	if !m.isPan && m.hasTool {
