@@ -95,6 +95,11 @@ func (b *Buffer) Get(x, y int) (*Cell, bool) {
 }
 
 func (b *Buffer) Set(x int, y int, v byte, s tcell.Style) {
+	// For safety's sake, turn every non-7-bit graphic ASCII character into a space.
+	// SetContent already does this, but I wanna be extra safe
+	if v <= 0x20 || v >= 0x7f {
+		v = ' '
+	}
 	b.Data.Set(x, y, Cell{
 		Value: v,
 		Style: s,
