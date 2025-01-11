@@ -15,6 +15,7 @@ type Painter interface {
 	SetByte(x, y int, v byte, style tcell.Style)
 	SetRune(x, y int, v rune, combining []rune, style tcell.Style)
 	SetStyle(x, y int, style tcell.Style)
+	GetContent(x, y int) (rune, tcell.Style)
 }
 
 type DefaultPainter struct{}
@@ -41,6 +42,11 @@ func (d DefaultPainter) SetRune(
 	style tcell.Style,
 ) {
 	Screen.SetContent(x, y, rune(v), combining, style)
+}
+
+func (d DefaultPainter) GetContent(x, y int) (rune, tcell.Style) {
+	rune, _, style, _ := Screen.GetContent(x, y)
+	return rune, style
 }
 
 func (d DefaultPainter) SetStyle(x, y int, style tcell.Style) {
@@ -72,6 +78,16 @@ func (a *CropPainter) SetStyle(x, y int, style tcell.Style) {
 	if a.area.Contains(xx, yy) {
 		a.p.SetStyle(xx+a.offsetAfter.X, yy+a.offsetAfter.Y, style)
 	}
+}
+
+func (a *CropPainter) GetContent(x, y int) (rune, tcell.Style) {
+	xx, yy := x+a.offsetBefore.X, y+a.offsetBefore.Y
+	if a.area.Contains(xx, yy) {
+		rune, _, style, _ := Screen.GetContent(x, y)
+		return rune, style
+	}
+
+	return 0, tcell.StyleDefault
 }
 
 type Span struct {
