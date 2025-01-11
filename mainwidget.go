@@ -77,6 +77,14 @@ type MainWidget struct {
 	brushCharacter byte
 	fgColor        tcell.Color
 	bgColor        tcell.Color
+
+	selectionTopLeft Position
+	selectionMask    Grid[bool]
+
+	xformActive   bool
+	currentXformX int
+	currentXformY int
+	xformCanvas   *Buffer
 }
 
 var (
@@ -266,6 +274,11 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				return
 			}
 
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 't' {
+				m.SetTool(&TranslateTool{})
+				return
+			}
+
 			if m.colorSelectState == ColorSelectFg {
 				m.colorSelectState = ColorSelectNone
 				r := ev.Rune()
@@ -323,7 +336,12 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 		canvasOffY += m.cursorY - m.panOriginY
 	}
 
-	m.canvas.RenderWith(crop, canvasOffX, canvasOffY, true)
+	if m.xformActive {
+		m.xformCanvas.RenderWith(crop, canvasOffX, canvasOffY, true)
+	} else {
+		m.canvas.RenderWith(crop, canvasOffX, canvasOffY, true)
+	}
+
 	BorderBox(crop, Area{
 		X:      canvasOffX - 1,
 		Y:      canvasOffY - 1,
@@ -418,6 +436,29 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 		}
 
 		SetString(p, x+5+16, y, " ` ", tcell.StyleDefault)
+	}
+
+	// selection mask
+	if m.selectionMask.Width > 0 && m.selectionMask.Height > 0 {
+		minX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X))
+		minY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y))
+		maxX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X+m.selectionMask.Width))
+		maxY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y+m.selectionMask.Height))
+		ox, oy := canvasOffX, canvasOffY
+		if m.xformActive {
+			ox += m.currentXformX
+			oy += m.currentXformY
+		}
+
+		for y := minY; y < maxY; y++ {
+			for x := minX; x < maxX; x++ {
+				if m.selectionMask.MustGet(x-m.selectionTopLeft.X, y-m.selectionTopLeft.Y) {
+					xx, yy := x+ox, y+oy
+					_, s := crop.GetContent(xx, yy)
+					crop.SetStyle(xx, yy, s.Reverse(true))
+				}
+			}
+		}
 	}
 }
 
@@ -549,4 +590,24 @@ func (m *MainWidget) Load(s string) {
 	}
 
 	msg = fmt.Sprintf("Successfully loaded %s", s)
+}
+
+func (m *MainWidget) ReplaceSelectionMask(topLeft Position, mask Grid[bool]) {
+	m.selectionMask = mask
+	m.selectionTopLeft = topLeft
+}
+
+func (m *MainWidget) SetTransform(dx, dy int) {
+	m.xformActive = true
+	m.currentXformX, m.currentXformY = dx, dy
+	m.xformCanvas = m.canvas.Clone()
+	m.xformCanvas.TranslateBlankTransparent(m.canvas, m.selectionMask, m.selectionTopLeft, dx, dy)
+}
+
+func (m *MainWidget) CommitTransform() {
+	m.canvas = m.xformCanvas
+	m.xformActive = false
+	m.xformCanvas = nil
+	m.selectionTopLeft.X += m.currentXformX
+	m.selectionTopLeft.Y += m.currentXformY
 }

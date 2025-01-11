@@ -1,5 +1,7 @@
 package main
 
+import "fmt"
+
 type Grid[T any] struct {
 	data   []T
 	Width  int
@@ -94,7 +96,14 @@ func (g *Grid[T]) Get(x int, y int) (T, bool) {
 
 func (g *Grid[T]) MustGet(x, y int) T {
 	if !g.InBounds(x, y) {
-		panic("Out of bounds")
+		panic(
+			fmt.Sprintf(
+				"Out of bounds index %d %d for grid of size %d %d",
+				x, y,
+				g.Width, g.Height,
+			),
+		)
+
 	}
 	return g.data[y*g.Width+x]
 }

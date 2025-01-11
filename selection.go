@@ -23,32 +23,37 @@ func (l *LassoTool) HandleEvent(m *MainWidget, event tcell.Event) {
 				l.lassoPoints = append(l.lassoPoints, p)
 			}
 
-			l.topLeft, l.mask = CreateMask(l.lassoPoints)
-		} else {
+		} else if l.isLassoing {
 			l.isLassoing = false
+			topLeft, mask := CreateMask(l.lassoPoints)
+			// convert from canvas to screen coords
+			topLeft.X -= m.sx + m.offsetX
+			topLeft.Y -= m.sy + m.offsetY
+			m.ReplaceSelectionMask(topLeft, mask)
 		}
 	}
 }
 
 func (l *LassoTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
-	for y := range l.mask.Height {
-		for x := range l.mask.Width {
-			if !l.mask.MustGet(x, y) {
-				continue
+	if l.isLassoing {
+		j := len(l.lassoPoints) - 1
+		for i, p1 := range l.lassoPoints {
+			p2 := l.lassoPoints[j]
+			points := LinePositions(p1.X, p1.Y, p2.X, p2.Y)
+			for _, ps := range points {
+				p.SetByte(ps.X, ps.Y, '#', tcell.StyleDefault)
 			}
-			xx, yy := x+l.topLeft.X, y+l.topLeft.Y
-			_, s := p.GetContent(xx, yy)
-			p.SetStyle(xx, yy, s.Reverse(true))
+			j = i
 		}
 	}
-	// j := len(l.lassoPoints) - 1
-	// for i, p1 := range l.lassoPoints {
-	// 	p2 := l.lassoPoints[j]
-	// 	points := LinePositions(p1.X, p1.Y, p2.X, p2.Y)
-	// 	for _, ps := range points {
-	// 		_, s := p.GetContent(ps.X, ps.Y)
-	// 		p.SetStyle(ps.X, ps.Y, s.Reverse(true))
+	// for y := range l.mask.Height {
+	// 	for x := range l.mask.Width {
+	// 		if !l.mask.MustGet(x, y) {
+	// 			continue
+	// 		}
+	// 		xx, yy := x+l.topLeft.X, y+l.topLeft.Y
+	// 		_, s := p.GetContent(xx, yy)
+	// 		p.SetStyle(xx, yy, s.Reverse(true))
 	// 	}
-	// 	j = i
 	// }
 }

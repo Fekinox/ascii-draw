@@ -221,3 +221,69 @@ func (b *Buffer) Save(w io.Writer) error {
 
 	return nil
 }
+
+func (b *Buffer) Clone() *Buffer {
+	return &Buffer{
+		Data: b.Data.ShallowClone(),
+	}
+}
+
+func (b *Buffer) Clear() {
+	for y := range b.Data.Height {
+		for x := range b.Data.Width {
+			b.Data.Set(x, y, Cell{Value: ' '})
+		}
+	}
+}
+
+func (b *Buffer) Translate(
+	other *Buffer,
+	mask Grid[bool],
+	topLeft Position,
+	dx, dy int,
+) {
+	b.Clear()
+
+	for y := range b.Data.Height {
+		for x := range b.Data.Width {
+			var v Cell
+			if m, ok := mask.Get(x-dx-topLeft.X, y-dy-topLeft.Y); m && ok {
+				// If (x,y) - (dx, dy) + (tlx, tly) is in the mask, return the value of
+				// (x,y) - (dx,dy).
+				if val, ok := other.Data.Get(x-dx, y-dy); ok {
+					v = val
+				}
+			} else if m, ok := mask.Get(x-topLeft.X, y-topLeft.Y); !m || !ok {
+				// If (x,y) + (tlx,tly) is not in the mask, return the value of (x,y).
+				v = other.Data.MustGet(x, y)
+			}
+			b.Data.Set(x, y, v)
+		}
+	}
+}
+
+func (b *Buffer) TranslateBlankTransparent(
+	other *Buffer,
+	mask Grid[bool],
+	topLeft Position,
+	dx, dy int,
+) {
+	b.Clear()
+
+	for y := range b.Data.Height {
+		for x := range b.Data.Width {
+			if m, ok := mask.Get(x-dx-topLeft.X, y-dy-topLeft.Y); m && ok {
+				// If (x,y) - (dx, dy) + (tlx, tly) is in the mask, return the value of
+				// (x,y) - (dx,dy).
+				val, ok := other.Data.Get(x-dx, y-dy)
+				if ok && val.Value != ' ' {
+					b.Data.Set(x, y, val)
+					continue
+				}
+			}
+			if m, ok := mask.Get(x-topLeft.X, y-topLeft.Y); !m || !ok {
+				b.Data.Set(x, y, other.Data.MustGet(x, y))
+			}
+		}
+	}
+}
