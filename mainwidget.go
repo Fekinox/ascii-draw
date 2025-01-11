@@ -278,7 +278,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				}
 				return
 			}
-		} else {
+
 			m.brushCharacter = byte(ev.Rune())
 		}
 	}
@@ -371,6 +371,9 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 		DrawDragIndicator(
 			p, cx, cy, m.colorPickOriginX+m.sx, m.colorPickOriginY+m.sy,
 		)
+	} else {
+		cx, cy := m.cursorX+m.sx, m.cursorY+m.sy
+		p.SetByte(cx, cy, m.brushCharacter, tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor))
 	}
 
 	// color selector
