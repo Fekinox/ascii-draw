@@ -83,7 +83,7 @@ func (a *CropPainter) SetStyle(x, y int, style tcell.Style) {
 func (a *CropPainter) GetContent(x, y int) (rune, tcell.Style) {
 	xx, yy := x+a.offsetBefore.X, y+a.offsetBefore.Y
 	if a.area.Contains(xx, yy) {
-		rune, _, style, _ := Screen.GetContent(x, y)
+		rune, _, style, _ := Screen.GetContent(xx, yy)
 		return rune, style
 	}
 

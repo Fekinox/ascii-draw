@@ -279,6 +279,11 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				return
 			}
 
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'q' {
+				m.SetTool(&LineTool{})
+				return
+			}
+
 			if m.colorSelectState == ColorSelectFg {
 				m.colorSelectState = ColorSelectNone
 				r := ev.Rune()
@@ -297,7 +302,9 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				return
 			}
 
-			m.brushCharacter = byte(ev.Rune())
+			if !m.hasTool {
+				m.brushCharacter = byte(ev.Rune())
+			}
 		}
 	}
 
