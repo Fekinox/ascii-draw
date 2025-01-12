@@ -81,6 +81,8 @@ type MainWidget struct {
 	selectionTopLeft Position
 	selectionMask    Grid[bool]
 
+	clipboard Grid[Cell]
+
 	xformActive   bool
 	currentXformX int
 	currentXformY int
@@ -284,6 +286,19 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				return
 			}
 
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'a' {
+				m.selectionMask = MakeGrid(0, 0, false)
+				return
+			}
+
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'c' {
+				m.SetClipboard()
+				return
+			}
+
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'v' {
+			}
+
 			if m.colorSelectState == ColorSelectFg {
 				m.colorSelectState = ColorSelectNone
 				r := ev.Rune()
@@ -445,6 +460,16 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 		SetString(p, x+5+16, y, " ` ", tcell.StyleDefault)
 	}
 
+	// clipboard
+	if m.clipboard.Width != 0 && m.clipboard.Height != 0 {
+		for y := range m.clipboard.Height {
+			for x := range m.clipboard.Width {
+				c := m.clipboard.MustGet(x, y)
+				crop.SetByte(x, y, c.Value, c.Style)
+			}
+		}
+	}
+
 	// selection mask
 	if m.selectionMask.Width > 0 && m.selectionMask.Height > 0 {
 		minX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X))
@@ -467,6 +492,7 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 			}
 		}
 	}
+
 }
 
 func (m *MainWidget) ScreenResize(sw, sh int) {
@@ -617,4 +643,21 @@ func (m *MainWidget) CommitTransform() {
 	m.xformCanvas = nil
 	m.selectionTopLeft.X += m.currentXformX
 	m.selectionTopLeft.Y += m.currentXformY
+}
+
+func (m *MainWidget) SetClipboard() {
+	m.clipboard = MakeGrid(m.selectionMask.Width, m.selectionMask.Height, Cell{})
+	minX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X))
+	minY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y))
+	maxX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X+m.selectionMask.Width))
+	maxY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y+m.selectionMask.Height))
+	for y := minY; y < maxY; y++ {
+		for x := minX; x < maxX; x++ {
+			m.clipboard.Set(
+				x-m.selectionTopLeft.X,
+				y-m.selectionTopLeft.Y,
+				m.canvas.Data.MustGet(x, y),
+			)
+		}
+	}
 }
