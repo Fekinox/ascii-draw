@@ -15,7 +15,6 @@ func (l *StampTool) HandleEvent(m *MainWidget, event tcell.Event) {
 	switch ev := event.(type) {
 	case *tcell.EventMouse:
 		cx, cy := m.cursorX-m.offsetX-m.sx, m.cursorY-m.offsetY-m.sy
-		dx, dy := -m.clipboard.Width/2, -m.clipboard.Height/2
 		if ev.Buttons()&tcell.Button1 != 0 {
 			if !l.isDragging {
 				l.isDragging = true
@@ -27,16 +26,9 @@ func (l *StampTool) HandleEvent(m *MainWidget, event tcell.Event) {
 			}
 		} else if l.isDragging {
 			l.isDragging = false
-			for _, p := range l.points {
-				for y := range m.clipboard.Height {
-					for x := range m.clipboard.Width {
-						c := m.clipboard.MustGet(x, y)
-						if c.Value != ' ' {
-							m.canvas.Data.Set(x+p.X+dx, y+p.Y+dy, c)
-						}
-					}
-				}
-			}
+			m.Stage()
+			m.stagingCanvas.Stamp(m.canvas, m.clipboard, l.points)
+			m.Commit()
 			l.points = nil
 		}
 	}

@@ -41,9 +41,10 @@ func (b *BrushTool) HandleEvent(m *MainWidget, event tcell.Event) {
 				Value: m.brushCharacter,
 				Style: tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
 			}
+			m.Stage()
 			for _, p := range b.points {
 				// m.canvas.Data.Set(pt.X-m.sx-m.offsetX, pt.Y-m.sy-m.offsetY, cell)
-				m.canvas.FillRegion(
+				m.stagingCanvas.FillRegion(
 					p.X-m.sx-m.offsetX-m.brushRadius/2,
 					p.Y-m.sy-m.offsetY-m.brushRadius/2,
 					m.brushRadius,
@@ -51,6 +52,7 @@ func (b *BrushTool) HandleEvent(m *MainWidget, event tcell.Event) {
 					cell,
 				)
 			}
+			m.Commit()
 			b.points = nil
 		}
 	case *tcell.EventKey:

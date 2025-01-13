@@ -22,14 +22,15 @@ func (l *LassoTool) HandleEvent(m *MainWidget, event tcell.Event) {
 			if len(l.lassoPoints) == 0 || l.lassoPoints[len(l.lassoPoints)-1] != p {
 				l.lassoPoints = append(l.lassoPoints, p)
 			}
-
 		} else if l.isLassoing {
+			m.Stage()
 			l.isLassoing = false
 			topLeft, mask := CreateMask(l.lassoPoints)
 			// convert from canvas to screen coords
 			topLeft.X -= m.sx + m.offsetX
 			topLeft.Y -= m.sy + m.offsetY
-			m.ReplaceSelectionMask(topLeft, mask)
+			m.stagingCanvas.SetSelection(mask, topLeft)
+			m.Commit()
 		}
 	}
 }

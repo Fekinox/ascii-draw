@@ -11,7 +11,7 @@ type LineTool struct {
 func (l *LineTool) HandleEvent(m *MainWidget, event tcell.Event) {
 	switch ev := event.(type) {
 	case *tcell.EventMouse:
-		cx, cy := m.cursorX+m.sx, m.cursorY+m.sy
+		cx, cy := m.cursorX-m.offsetX, m.cursorY-m.offsetY
 		if ev.Buttons()&tcell.Button1 != 0 {
 			if !l.isDragging {
 				l.isDragging = true
@@ -23,16 +23,10 @@ func (l *LineTool) HandleEvent(m *MainWidget, event tcell.Event) {
 				Value: m.brushCharacter,
 				Style: tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
 			}
-			for _, pt := range LinePositions(l.origX, l.origY, m.cursorX+m.sx, m.cursorY+m.sy) {
-				// m.canvas.Data.Set(pt.X-m.sx-m.offsetX, pt.Y-m.sy-m.offsetY, cell)
-				m.canvas.FillRegion(
-					pt.X-m.sx-m.offsetX-m.brushRadius/2,
-					pt.Y-m.sy-m.offsetY-m.brushRadius/2,
-					m.brushRadius,
-					m.brushRadius,
-					cell,
-				)
-			}
+			m.Stage()
+			linePositions := LinePositions(l.origX, l.origY, cx, cy)
+			m.stagingCanvas.BrushStrokes(m.brushRadius, cell, linePositions)
+			m.Commit()
 		}
 	case *tcell.EventKey:
 		if ev.Key() == tcell.KeyRune {
@@ -52,8 +46,10 @@ func (l *LineTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
 				Height: m.canvas.Data.Height,
 			},
 		}
-		for _, pt := range LinePositions(l.origX, l.origY, m.cursorX+m.sx, m.cursorY+m.sy) {
-			if m.canvas.Data.InBounds(pt.X-m.sx-m.offsetX, pt.Y-m.sy-m.offsetY) {
+		for _, pt := range LinePositions(
+			l.origX, l.origY,
+			m.cursorX-m.offsetX, m.cursorY-m.offsetY) {
+			if m.canvas.Data.InBounds(pt.X, pt.Y) {
 				// p.SetByte(
 				// 	pt.X,
 				// 	pt.Y,
@@ -62,7 +58,7 @@ func (l *LineTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
 				// )
 				FillRegion(
 					crop,
-					pt.X-m.brushRadius/2, pt.Y-m.brushRadius/2,
+					pt.X-m.brushRadius/2+m.offsetX+m.sx, pt.Y-m.brushRadius/2+m.offsetY+m.sy,
 					m.brushRadius, m.brushRadius,
 					rune(m.brushCharacter),
 					tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
