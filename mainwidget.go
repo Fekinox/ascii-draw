@@ -85,7 +85,7 @@ type MainWidget struct {
 	xformActive   bool
 	currentXformX int
 	currentXformY int
-	xformCanvas   *Buffer
+	stagingCanvas *Buffer
 }
 
 var (
@@ -350,7 +350,7 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	}
 
 	if m.xformActive {
-		m.xformCanvas.RenderWith(crop, canvasOffX, canvasOffY, true)
+		m.stagingCanvas.RenderWith(crop, canvasOffX, canvasOffY, true)
 	} else {
 		m.canvas.RenderWith(crop, canvasOffX, canvasOffY, true)
 	}
@@ -622,14 +622,14 @@ func (m *MainWidget) ReplaceSelectionMask(topLeft Position, mask Grid[bool]) {
 func (m *MainWidget) SetTransform(dx, dy int) {
 	m.xformActive = true
 	m.currentXformX, m.currentXformY = dx, dy
-	m.xformCanvas = m.canvas.Clone()
-	m.xformCanvas.TranslateBlankTransparent(m.canvas, m.selectionMask, m.selectionTopLeft, dx, dy)
+	m.stagingCanvas = m.canvas.Clone()
+	m.stagingCanvas.TranslateBlankTransparent(m.canvas, m.selectionMask, m.selectionTopLeft, dx, dy)
 }
 
 func (m *MainWidget) CommitTransform() {
-	m.canvas = m.xformCanvas
+	m.canvas = m.stagingCanvas
 	m.xformActive = false
-	m.xformCanvas = nil
+	m.stagingCanvas = nil
 	m.selectionTopLeft.X += m.currentXformX
 	m.selectionTopLeft.Y += m.currentXformY
 }

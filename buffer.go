@@ -52,12 +52,15 @@ func Decode(u uint16, c *Cell) {
 }
 
 type Buffer struct {
-	Data Grid[Cell]
+	Data            Grid[Cell]
+	activeSelection bool
+	SelectionMask   Grid[bool]
 }
 
 func MakeBuffer(width, height int) *Buffer {
 	b := &Buffer{
-		Data: MakeGrid(width, height, Cell{Value: ' '}),
+		Data:          MakeGrid(width, height, Cell{Value: ' '}),
+		SelectionMask: MakeGrid(width, height, false),
 	}
 	return b
 }
@@ -236,6 +239,15 @@ func (b *Buffer) Clear() {
 	}
 }
 
+func (b *Buffer) ClearSelection() {
+	b.activeSelection = false
+	for y := range b.Data.Height {
+		for x := range b.Data.Width {
+			b.SelectionMask.Set(x, y, false)
+		}
+	}
+}
+
 func (b *Buffer) Translate(
 	other *Buffer,
 	mask Grid[bool],
@@ -296,6 +308,37 @@ func (b *Buffer) FillRegion(x, y, w, h int, cell Cell) {
 	for yy := minY; yy < maxY; yy++ {
 		for xx := minX; xx < maxX; xx++ {
 			b.Data.Set(xx, yy, cell)
+		}
+	}
+}
+
+func (b *Buffer) SetSelection(mask Grid[bool], topLeft Position) {
+	b.ClearSelection()
+	for y := range b.Data.Height {
+		for x := range b.Data.Width {
+			if inMask, ok := mask.Get(x-topLeft.X, y-topLeft.Y); ok && inMask {
+				b.SelectionMask.Set(x, y, true)
+			}
+		}
+	}
+}
+
+func (b *Buffer) BrushStrokes(radius int, cell Cell, points []Position) {
+	for _, pt := range points {
+		b.FillRegion(pt.X-radius/2, pt.Y-radius/2, radius, radius, cell)
+	}
+}
+
+func (b *Buffer) Stamp(other *Buffer, clipboard Grid[Cell], points []Position) {
+	dx, dy := -clipboard.Width/2, -clipboard.Height/2
+	for _, pt := range points {
+		for y := range clipboard.Height {
+			for x := range clipboard.Width {
+				c := clipboard.MustGet(x, y)
+				if c.Value != ' ' {
+					b.Data.Set(x+pt.X+dx, y+pt.Y+dy, c)
+				}
+			}
 		}
 	}
 }
