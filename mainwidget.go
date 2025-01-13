@@ -512,12 +512,14 @@ func (m *MainWidget) CenterCanvas() {
 }
 
 func (m *MainWidget) SetTool(tool Tool) {
+	m.Commit()
 	m.hasTool = true
 	m.currentTool = tool
 	m.statusLine = ""
 }
 
 func (m *MainWidget) ClearTool() {
+	m.Commit()
 	m.hasTool = true
 	m.currentTool = &BrushTool{}
 	m.statusLine = ""
