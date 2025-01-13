@@ -235,7 +235,9 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			}
 
 			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'n' {
-				m.canvas = MakeBuffer(m.canvas.Data.Width, m.canvas.Data.Height)
+				m.Stage()
+				m.stagingCanvas = MakeBuffer(m.canvas.Data.Width, m.canvas.Data.Height)
+				m.Commit()
 				return
 			}
 
