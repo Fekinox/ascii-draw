@@ -313,7 +313,14 @@ func (b *Buffer) FillRegion(x, y, w, h int, cell Cell) {
 	maxY := max(0, min(b.Data.Height, y+h))
 	for yy := minY; yy < maxY; yy++ {
 		for xx := minX; xx < maxX; xx++ {
-			b.Data.Set(xx, yy, cell)
+			ok := true
+			if b.activeSelection {
+				m, o := b.SelectionMask.Get(xx, yy)
+				ok = m && o
+			}
+			if ok {
+				b.Data.Set(xx, yy, cell)
+			}
 		}
 	}
 }
@@ -342,7 +349,13 @@ func (b *Buffer) Stamp(other *Buffer, clipboard Grid[Cell], points []Position) {
 		for y := range clipboard.Height {
 			for x := range clipboard.Width {
 				c := clipboard.MustGet(x, y)
-				if c.Value != ' ' {
+				ok := true
+				if b.activeSelection {
+					m, o := b.SelectionMask.Get(x+pt.X+dx, y+pt.Y+dy)
+					ok = m && o
+				}
+
+				if ok && c.Value != ' ' {
 					b.Data.Set(x+pt.X+dx, y+pt.Y+dy, c)
 				}
 			}
