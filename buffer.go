@@ -321,6 +321,7 @@ func (b *Buffer) SetSelection(mask Grid[bool], topLeft Position) {
 			}
 		}
 	}
+	b.activeSelection = true
 }
 
 func (b *Buffer) BrushStrokes(radius int, cell Cell, points []Position) {

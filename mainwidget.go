@@ -77,12 +77,9 @@ type MainWidget struct {
 	bgColor        tcell.Color
 	brushRadius    int
 
-	selectionTopLeft Position
-	selectionMask    Grid[bool]
-
 	clipboard Grid[Cell]
 
-	xformActive   bool
+	isStaging     bool
 	currentXformX int
 	currentXformY int
 	stagingCanvas *Buffer
@@ -260,7 +257,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			}
 
 			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'a' {
-				m.selectionMask = MakeGrid(0, 0, false)
+				m.canvas.ClearSelection()
 				return
 			}
 
@@ -349,7 +346,8 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 		canvasOffY += m.cursorY - m.panOriginY
 	}
 
-	if m.xformActive {
+	// canvas rendering
+	if m.isStaging {
 		m.stagingCanvas.RenderWith(crop, canvasOffX, canvasOffY, true)
 	} else {
 		m.canvas.RenderWith(crop, canvasOffX, canvasOffY, true)
@@ -460,20 +458,16 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	}
 
 	// selection mask
-	if m.selectionMask.Width != 0 && m.selectionMask.Height != 0 {
-		minX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X))
-		minY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y))
-		maxX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X+m.selectionMask.Width))
-		maxY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y+m.selectionMask.Height))
+	if m.canvas.activeSelection {
 		ox, oy := canvasOffX, canvasOffY
-		if m.xformActive {
+		if m.isStaging {
 			ox += m.currentXformX
 			oy += m.currentXformY
 		}
 
-		for y := minY; y < maxY; y++ {
-			for x := minX; x < maxX; x++ {
-				if m.selectionMask.MustGet(x-m.selectionTopLeft.X, y-m.selectionTopLeft.Y) {
+		for y := range m.canvas.Data.Height {
+			for x := range m.canvas.Data.Width {
+				if m.canvas.SelectionMask.MustGet(x, y) {
 					xx, yy := x+ox, y+oy
 					_, s := crop.GetContent(xx, yy)
 					crop.SetStyle(xx, yy, s.Reverse(true))
@@ -615,48 +609,44 @@ func (m *MainWidget) Load(s string) {
 }
 
 func (m *MainWidget) ReplaceSelectionMask(topLeft Position, mask Grid[bool]) {
-	m.selectionMask = mask
-	m.selectionTopLeft = topLeft
+	m.canvas.SetSelection(mask, topLeft)
 }
 
 func (m *MainWidget) SetTransform(dx, dy int) {
-	m.xformActive = true
+	m.isStaging = true
 	m.currentXformX, m.currentXformY = dx, dy
 	m.stagingCanvas = m.canvas.Clone()
-	m.stagingCanvas.TranslateBlankTransparent(m.canvas, m.selectionMask, m.selectionTopLeft, dx, dy)
+	m.stagingCanvas.TranslateBlankTransparent(m.canvas, m.canvas.SelectionMask, Position{}, dx, dy)
 }
 
 func (m *MainWidget) CommitTransform() {
 	m.canvas = m.stagingCanvas
-	m.xformActive = false
+	m.isStaging = false
 	m.stagingCanvas = nil
-	m.selectionTopLeft.X += m.currentXformX
-	m.selectionTopLeft.Y += m.currentXformY
 }
 
 func (m *MainWidget) SetClipboard() {
-	m.clipboard = MakeGrid(m.selectionMask.Width, m.selectionMask.Height, Cell{})
-	minX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X))
-	minY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y))
-	maxX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X+m.selectionMask.Width))
-	maxY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y+m.selectionMask.Height))
-	for y := minY; y < maxY; y++ {
-		for x := minX; x < maxX; x++ {
-			m.clipboard.Set(
-				x-m.selectionTopLeft.X,
-				y-m.selectionTopLeft.Y,
-				m.canvas.Data.MustGet(x, y),
-			)
-		}
-	}
+	// m.clipboard = MakeGrid(m.selectionMask.Width, m.selectionMask.Height, Cell{})
+	// minX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X))
+	// minY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y))
+	// maxX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X+m.selectionMask.Width))
+	// maxY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y+m.selectionMask.Height))
+	// for y := minY; y < maxY; y++ {
+	// 	for x := minX; x < maxX; x++ {
+	// 		m.clipboard.Set(
+	// 			x-m.selectionTopLeft.X,
+	// 			y-m.selectionTopLeft.Y,
+	// 			m.canvas.Data.MustGet(x, y),
+	// 		)
+	// 	}
+	// }
 }
 
 func (m *MainWidget) DeleteSelection() {
-	for my := range m.selectionMask.Height {
-		for mx := range m.selectionMask.Width {
-			if m.selectionMask.MustGet(mx, my) {
-				cx, cy := mx+m.selectionTopLeft.X, my+m.selectionTopLeft.Y
-				m.canvas.Data.Set(cx, cy, Cell{Value: ' '})
+	for y := range m.canvas.Data.Height {
+		for x := range m.canvas.Data.Width {
+			if m.canvas.SelectionMask.MustGet(x, y) {
+				m.canvas.Data.Set(x, y, Cell{Value: ' '})
 			}
 		}
 	}
