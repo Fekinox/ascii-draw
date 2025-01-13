@@ -257,7 +257,9 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			}
 
 			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'a' {
-				m.canvas.Deselect()
+				m.Stage()
+				m.stagingCanvas.Deselect()
+				m.Commit()
 				return
 			}
 
@@ -268,7 +270,9 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 
 			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'x' {
 				m.SetClipboard()
-				m.canvas.ClearSelection()
+				m.Stage()
+				m.stagingCanvas.ClearSelection()
+				m.Commit()
 				return
 			}
 
