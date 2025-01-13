@@ -651,7 +651,7 @@ func (m *MainWidget) Commit() {
 
 	if m.undoHistoryPos > 0 {
 		m.undoHistoryPos = 0
-		m.bufferHistory = m.bufferHistory[:len(m.bufferHistory)-m.undoHistoryPos]
+		m.bufferHistory = m.bufferHistory[:len(m.bufferHistory)-m.undoHistoryPos-1]
 	} else {
 		m.bufferHistory = append(m.bufferHistory, m.canvas)
 	}
