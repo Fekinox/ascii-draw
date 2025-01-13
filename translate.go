@@ -17,12 +17,17 @@ func (l *TranslateTool) HandleEvent(m *MainWidget, event tcell.Event) {
 				l.isDragging = true
 				l.origX, l.origY = cx, cy
 			}
-			m.SetTransform(cx-l.origX, cy-l.origY)
+			m.Stage()
+			m.stagingCanvas.TranslateBlankTransparent(
+				m.canvas,
+				m.canvas.SelectionMask,
+				Position{},
+				cx-l.origX, cy-l.origY,
+			)
 		} else if l.isDragging {
 			l.isDragging = false
 
-			m.SetTransform(cx-l.origX, cy-l.origY)
-			m.CommitTransform()
+			m.Commit()
 		}
 	}
 }

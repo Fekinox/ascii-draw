@@ -80,8 +80,6 @@ type MainWidget struct {
 	clipboard Grid[Cell]
 
 	isStaging     bool
-	currentXformX int
-	currentXformY int
 	stagingCanvas *Buffer
 }
 
@@ -458,16 +456,16 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	}
 
 	// selection mask
-	if m.canvas.activeSelection {
+	sc := m.canvas
+	if m.isStaging {
+		sc = m.stagingCanvas
+	}
+	if sc.activeSelection {
 		ox, oy := canvasOffX, canvasOffY
-		if m.isStaging {
-			ox += m.currentXformX
-			oy += m.currentXformY
-		}
 
-		for y := range m.canvas.Data.Height {
-			for x := range m.canvas.Data.Width {
-				if m.canvas.SelectionMask.MustGet(x, y) {
+		for y := range sc.Data.Height {
+			for x := range sc.Data.Width {
+				if sc.SelectionMask.MustGet(x, y) {
 					xx, yy := x+ox, y+oy
 					_, s := crop.GetContent(xx, yy)
 					crop.SetStyle(xx, yy, s.Reverse(true))
@@ -612,19 +610,28 @@ func (m *MainWidget) ReplaceSelectionMask(topLeft Position, mask Grid[bool]) {
 	m.canvas.SetSelection(mask, topLeft)
 }
 
-func (m *MainWidget) SetTransform(dx, dy int) {
-	m.isStaging = true
-	m.currentXformX, m.currentXformY = dx, dy
-	m.stagingCanvas = m.canvas.Clone()
-	m.stagingCanvas.TranslateBlankTransparent(m.canvas, m.canvas.SelectionMask, Position{}, dx, dy)
-}
-
-func (m *MainWidget) CommitTransform() {
-	m.canvas = m.stagingCanvas
-	m.isStaging = false
-	m.stagingCanvas = nil
-}
-
 func (m *MainWidget) SetClipboard() {
 	m.clipboard = m.canvas.CopySelection()
+}
+
+func (m *MainWidget) Stage() {
+	if !m.isStaging {
+		m.isStaging = true
+		m.stagingCanvas = m.canvas.Clone()
+	}
+}
+
+func (m *MainWidget) Commit() {
+	if m.isStaging {
+		m.isStaging = false
+		m.canvas = m.stagingCanvas
+		m.stagingCanvas = nil
+	}
+}
+
+func (m *MainWidget) Rollback() {
+	if m.isStaging {
+		m.isStaging = false
+		m.stagingCanvas = nil
+	}
 }

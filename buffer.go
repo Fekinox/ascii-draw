@@ -227,7 +227,9 @@ func (b *Buffer) Save(w io.Writer) error {
 
 func (b *Buffer) Clone() *Buffer {
 	return &Buffer{
-		Data: b.Data.ShallowClone(),
+		Data:            b.Data.ShallowClone(),
+		SelectionMask:   b.SelectionMask.ShallowClone(),
+		activeSelection: b.activeSelection,
 	}
 }
 
@@ -282,9 +284,15 @@ func (b *Buffer) TranslateBlankTransparent(
 ) {
 	b.Clear()
 
+	b.Deselect()
+	if other.activeSelection {
+		b.activeSelection = true
+	}
+
 	for y := range b.Data.Height {
 		for x := range b.Data.Width {
 			if m, ok := mask.Get(x-dx-topLeft.X, y-dy-topLeft.Y); m && ok {
+				b.SelectionMask.Set(x, y, true)
 				val, ok := other.Data.Get(x-dx, y-dy)
 				if ok && val.Value != ' ' {
 					b.Data.Set(x, y, val)
