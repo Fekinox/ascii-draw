@@ -257,7 +257,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			}
 
 			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'a' {
-				m.canvas.ClearSelection()
+				m.canvas.Deselect()
 				return
 			}
 
@@ -268,7 +268,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 
 			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'x' {
 				m.SetClipboard()
-				m.DeleteSelection()
+				m.canvas.ClearSelection()
 				return
 			}
 
@@ -626,28 +626,8 @@ func (m *MainWidget) CommitTransform() {
 }
 
 func (m *MainWidget) SetClipboard() {
-	// m.clipboard = MakeGrid(m.selectionMask.Width, m.selectionMask.Height, Cell{})
-	// minX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X))
-	// minY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y))
-	// maxX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X+m.selectionMask.Width))
-	// maxY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y+m.selectionMask.Height))
-	// for y := minY; y < maxY; y++ {
-	// 	for x := minX; x < maxX; x++ {
-	// 		m.clipboard.Set(
-	// 			x-m.selectionTopLeft.X,
-	// 			y-m.selectionTopLeft.Y,
-	// 			m.canvas.Data.MustGet(x, y),
-	// 		)
-	// 	}
-	// }
+	m.clipboard = m.canvas.CopySelection()
 }
 
 func (m *MainWidget) DeleteSelection() {
-	for y := range m.canvas.Data.Height {
-		for x := range m.canvas.Data.Width {
-			if m.canvas.SelectionMask.MustGet(x, y) {
-				m.canvas.Data.Set(x, y, Cell{Value: ' '})
-			}
-		}
-	}
 }

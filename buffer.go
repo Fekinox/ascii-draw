@@ -239,7 +239,7 @@ func (b *Buffer) Clear() {
 	}
 }
 
-func (b *Buffer) ClearSelection() {
+func (b *Buffer) Deselect() {
 	b.activeSelection = false
 	for y := range b.Data.Height {
 		for x := range b.Data.Width {
@@ -313,7 +313,7 @@ func (b *Buffer) FillRegion(x, y, w, h int, cell Cell) {
 }
 
 func (b *Buffer) SetSelection(mask Grid[bool], topLeft Position) {
-	b.ClearSelection()
+	b.Deselect()
 	for y := range b.Data.Height {
 		for x := range b.Data.Width {
 			if inMask, ok := mask.Get(x-topLeft.X, y-topLeft.Y); ok && inMask {
@@ -342,4 +342,39 @@ func (b *Buffer) Stamp(other *Buffer, clipboard Grid[Cell], points []Position) {
 			}
 		}
 	}
+}
+
+func (b *Buffer) ClearSelection() {
+	for y := range b.Data.Height {
+		for x := range b.Data.Width {
+			if b.SelectionMask.MustGet(x, y) {
+				b.Data.Set(x, y, Cell{Value: ' '})
+			}
+		}
+	}
+}
+
+func (b *Buffer) CopySelection() Grid[Cell] {
+	minX, maxX := b.Data.Width-1, 0
+	minY, maxY := b.Data.Height-1, 0
+
+	for y := range b.Data.Height {
+		for x := range b.Data.Width {
+			if b.SelectionMask.MustGet(x, y) {
+				minX, maxX = min(minX, x), max(maxX, x)
+				minY, maxY = min(minY, y), max(maxY, y)
+			}
+		}
+	}
+
+	res := MakeGrid(maxX-minX+1, maxY-minY+1, Cell{Value: ' '})
+	for y := range res.Height {
+		for x := range res.Width {
+			if b.SelectionMask.MustGet(x+minX, y+minY) {
+				res.Set(x, y, b.Data.MustGet(x+minX, y+minY))
+			}
+		}
+	}
+
+	return res
 }

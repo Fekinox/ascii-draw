@@ -14,7 +14,7 @@ func (l *StampTool) HandleEvent(m *MainWidget, event tcell.Event) {
 
 	switch ev := event.(type) {
 	case *tcell.EventMouse:
-		cx, cy := m.cursorX-m.offsetX, m.cursorY-m.offsetY
+		cx, cy := m.cursorX-m.offsetX-m.sx, m.cursorY-m.offsetY-m.sy
 		dx, dy := -m.clipboard.Width/2, -m.clipboard.Height/2
 		if ev.Buttons()&tcell.Button1 != 0 {
 			if !l.isDragging {
@@ -86,7 +86,7 @@ func (l *StampTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) 
 			for x := range m.clipboard.Width {
 				c := m.clipboard.MustGet(x, y)
 				if c.Value != ' ' {
-					crop.SetByte(m.cursorX+x+dx, m.cursorY+y+dy+m.sy+m.offsetY, c.Value, c.Style)
+					crop.SetByte(m.cursorX+x+dx, m.cursorY+y+dy, c.Value, c.Style)
 				}
 			}
 		}
