@@ -253,7 +253,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 		}
 
 		if ev.Key() == tcell.KeyRune {
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'x' {
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'p' {
 				m.SetTool(MakePromptTool(m.Export, "export path..."))
 				return
 			}
@@ -310,6 +310,12 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 
 			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'c' {
 				m.SetClipboard()
+				return
+			}
+
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'x' {
+				m.SetClipboard()
+				m.DeleteSelection()
 				return
 			}
 
@@ -685,6 +691,17 @@ func (m *MainWidget) SetClipboard() {
 				y-m.selectionTopLeft.Y,
 				m.canvas.Data.MustGet(x, y),
 			)
+		}
+	}
+}
+
+func (m *MainWidget) DeleteSelection() {
+	for my := range m.selectionMask.Height {
+		for mx := range m.selectionMask.Width {
+			if m.selectionMask.MustGet(mx, my) {
+				cx, cy := mx+m.selectionTopLeft.X, my+m.selectionTopLeft.Y
+				m.canvas.Data.Set(cx, cy, Cell{Value: ' '})
+			}
 		}
 	}
 }
