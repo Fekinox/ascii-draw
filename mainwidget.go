@@ -628,6 +628,3 @@ func (m *MainWidget) CommitTransform() {
 func (m *MainWidget) SetClipboard() {
 	m.clipboard = m.canvas.CopySelection()
 }
-
-func (m *MainWidget) DeleteSelection() {
-}

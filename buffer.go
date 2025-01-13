@@ -285,8 +285,6 @@ func (b *Buffer) TranslateBlankTransparent(
 	for y := range b.Data.Height {
 		for x := range b.Data.Width {
 			if m, ok := mask.Get(x-dx-topLeft.X, y-dy-topLeft.Y); m && ok {
-				// If (x,y) - (dx, dy) + (tlx, tly) is in the mask, return the value of
-				// (x,y) - (dx,dy).
 				val, ok := other.Data.Get(x-dx, y-dy)
 				if ok && val.Value != ' ' {
 					b.Data.Set(x, y, val)
