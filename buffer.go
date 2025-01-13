@@ -287,3 +287,15 @@ func (b *Buffer) TranslateBlankTransparent(
 		}
 	}
 }
+
+func (b *Buffer) FillRegion(x, y, w, h int, cell Cell) {
+	minX := max(0, min(b.Data.Width, x))
+	minY := max(0, min(b.Data.Height, y))
+	maxX := max(0, min(b.Data.Width, x+w))
+	maxY := max(0, min(b.Data.Height, y+h))
+	for yy := minY; yy < maxY; yy++ {
+		for xx := minX; xx < maxX; xx++ {
+			b.Data.Set(xx, yy, cell)
+		}
+	}
+}

@@ -8,6 +8,8 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+const MAX_BRUSH_RADIUS int = 99
+
 type ColorPickState int
 
 const (
@@ -77,6 +79,7 @@ type MainWidget struct {
 	brushCharacter byte
 	fgColor        tcell.Color
 	bgColor        tcell.Color
+	brushRadius    int
 
 	selectionTopLeft Position
 	selectionMask    Grid[bool]
@@ -98,6 +101,7 @@ func Init(a *App, screen tcell.Screen) *MainWidget {
 		app:            a,
 		canvas:         MakeBuffer(100, 60),
 		brushCharacter: '#',
+		brushRadius:    1,
 	}
 
 	w.ScreenResize(screen.Size())
@@ -204,10 +208,23 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 					cy,
 				)
 				for _, p := range positions {
-					m.canvas.Set(p.X, p.Y, m.brushCharacter, st)
+					// m.canvas.Set(p.X, p.Y, m.brushCharacter, st)
+					m.canvas.FillRegion(
+						p.X-m.brushRadius/2,
+						p.Y-m.brushRadius/2,
+						m.brushRadius,
+						m.brushRadius,
+						Cell{Value: m.brushCharacter, Style: st},
+					)
 				}
 			} else {
-				m.canvas.Set(cx, cy, m.brushCharacter, st)
+				m.canvas.FillRegion(
+					cx-m.brushRadius/2,
+					cy-m.brushRadius/2,
+					m.brushRadius,
+					m.brushRadius,
+					Cell{Value: m.brushCharacter, Style: st},
+				)
 			}
 
 			m.lastPaint = ev.When()
@@ -301,6 +318,16 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				return
 			}
 
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '=' {
+				m.brushRadius = min(MAX_BRUSH_RADIUS, m.brushRadius+1)
+				return
+			}
+
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '-' {
+				m.brushRadius = max(1, m.brushRadius-1)
+				return
+			}
+
 			if m.colorSelectState == ColorSelectFg {
 				m.colorSelectState = ColorSelectNone
 				r := ev.Rune()
@@ -382,6 +409,7 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	SetCenteredString(p, x+w/2, y, m.statusLine, tcell.StyleDefault)
 
 	// color/char indicators
+	SetString(p, x+w-27, y, fmt.Sprintf("radius: %d", m.brushRadius), tcell.StyleDefault)
 	SetString(p, x+w-17, y, "char: ", tcell.StyleDefault)
 	p.SetByte(x+w-12, y, m.brushCharacter, tcell.StyleDefault)
 	SetString(p, x+w-10, y, "fg: ", tcell.StyleDefault)
@@ -420,6 +448,13 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 		)
 	} else {
 		cx, cy := m.cursorX+m.sx, m.cursorY+m.sy
+		FillRegion(
+			p,
+			cx-m.brushRadius/2, cy-m.brushRadius/2,
+			m.brushRadius, m.brushRadius,
+			rune(m.brushCharacter),
+			tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
+		)
 		p.SetByte(cx, cy, m.brushCharacter, tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor))
 	}
 
