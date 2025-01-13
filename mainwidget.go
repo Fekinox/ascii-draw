@@ -81,6 +81,9 @@ type MainWidget struct {
 
 	isStaging     bool
 	stagingCanvas *Buffer
+
+	bufferHistory  []*Buffer
+	undoHistoryPos int
 }
 
 var (
@@ -291,6 +294,16 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				return
 			}
 
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'z' {
+				m.undoHistoryPos = min(len(m.bufferHistory), m.undoHistoryPos+1)
+				return
+			}
+
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'Z' {
+				m.undoHistoryPos = max(0, m.undoHistoryPos-1)
+				return
+			}
+
 			if m.colorSelectState == ColorSelectFg {
 				m.colorSelectState = ColorSelectNone
 				r := ev.Rune()
@@ -351,11 +364,13 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	}
 
 	// canvas rendering
+	curCanvas := m.canvas
 	if m.isStaging {
-		m.stagingCanvas.RenderWith(crop, canvasOffX, canvasOffY, true)
-	} else {
-		m.canvas.RenderWith(crop, canvasOffX, canvasOffY, true)
+		curCanvas = m.stagingCanvas
+	} else if m.undoHistoryPos > 0 {
+		curCanvas = m.bufferHistory[len(m.bufferHistory)-m.undoHistoryPos]
 	}
+	curCanvas.RenderWith(crop, canvasOffX, canvasOffY, true)
 
 	BorderBox(crop, Area{
 		X:      canvasOffX - 1,
@@ -462,16 +477,12 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	}
 
 	// selection mask
-	sc := m.canvas
-	if m.isStaging {
-		sc = m.stagingCanvas
-	}
-	if sc.activeSelection {
+	if curCanvas.activeSelection {
 		ox, oy := canvasOffX, canvasOffY
 
-		for y := range sc.Data.Height {
-			for x := range sc.Data.Width {
-				if sc.SelectionMask.MustGet(x, y) {
+		for y := range curCanvas.Data.Height {
+			for x := range curCanvas.Data.Width {
+				if curCanvas.SelectionMask.MustGet(x, y) {
 					xx, yy := x+ox, y+oy
 					_, s := crop.GetContent(xx, yy)
 					crop.SetStyle(xx, yy, s.Reverse(true))
@@ -621,23 +632,38 @@ func (m *MainWidget) SetClipboard() {
 }
 
 func (m *MainWidget) Stage() {
-	if !m.isStaging {
-		m.isStaging = true
-		m.stagingCanvas = m.canvas.Clone()
+	if m.isStaging {
+		return
 	}
+
+	curCanvas := m.canvas
+	if m.undoHistoryPos > 0 {
+		curCanvas = m.bufferHistory[len(m.bufferHistory)-m.undoHistoryPos]
+	}
+	m.isStaging = true
+	m.stagingCanvas = curCanvas.Clone()
 }
 
 func (m *MainWidget) Commit() {
-	if m.isStaging {
-		m.isStaging = false
-		m.canvas = m.stagingCanvas
-		m.stagingCanvas = nil
+	if !m.isStaging {
+		return
 	}
+
+	if m.undoHistoryPos > 0 {
+		m.undoHistoryPos = 0
+		m.bufferHistory = m.bufferHistory[:len(m.bufferHistory)-m.undoHistoryPos]
+	} else {
+		m.bufferHistory = append(m.bufferHistory, m.canvas)
+	}
+	m.isStaging = false
+	m.canvas = m.stagingCanvas
+	m.stagingCanvas = nil
 }
 
 func (m *MainWidget) Rollback() {
-	if m.isStaging {
-		m.isStaging = false
-		m.stagingCanvas = nil
+	if !m.isStaging {
+		return
 	}
+	m.isStaging = false
+	m.stagingCanvas = nil
 }
