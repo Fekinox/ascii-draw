@@ -61,32 +61,34 @@ func (b *BrushTool) HandleEvent(m *MainWidget, event tcell.Event) {
 }
 
 func (b *BrushTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
-	if b.isDragging {
-		crop := &CropPainter{
-			p: p,
-			area: Area{
-				X:      m.offsetX + m.sx,
-				Y:      m.offsetY + m.sy,
-				Width:  m.canvas.Data.Width,
-				Height: m.canvas.Data.Height,
-			},
-		}
-		for _, pt := range b.points {
-			if m.canvas.Data.InBounds(pt.X-m.sx-m.offsetX, pt.Y-m.sy-m.offsetY) {
-				// p.SetByte(
-				// 	pt.X,
-				// 	pt.Y,
-				// 	m.brushCharacter,
-				// 	tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
-				// )
-				FillRegion(
-					crop,
-					pt.X-m.brushRadius/2, pt.Y-m.brushRadius/2,
-					m.brushRadius, m.brushRadius,
-					rune(m.brushCharacter),
-					tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
-				)
-			}
+	if !b.isDragging {
+		return
+	}
+
+	crop := &CropPainter{
+		p: p,
+		area: Area{
+			X:      m.offsetX + m.sx,
+			Y:      m.offsetY + m.sy,
+			Width:  m.canvas.Data.Width,
+			Height: m.canvas.Data.Height,
+		},
+	}
+	for _, pt := range b.points {
+		if m.canvas.Data.InBounds(pt.X-m.sx-m.offsetX, pt.Y-m.sy-m.offsetY) {
+			// p.SetByte(
+			// 	pt.X,
+			// 	pt.Y,
+			// 	m.brushCharacter,
+			// 	tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
+			// )
+			FillRegion(
+				crop,
+				pt.X-m.brushRadius/2, pt.Y-m.brushRadius/2,
+				m.brushRadius, m.brushRadius,
+				rune(m.brushCharacter),
+				tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
+			)
 		}
 	}
 }
