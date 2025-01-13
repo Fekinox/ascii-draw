@@ -297,6 +297,8 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			}
 
 			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'v' {
+				m.SetTool(&StampTool{})
+				return
 			}
 
 			if m.colorSelectState == ColorSelectFg {
@@ -460,18 +462,8 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 		SetString(p, x+5+16, y, " ` ", tcell.StyleDefault)
 	}
 
-	// clipboard
-	if m.clipboard.Width != 0 && m.clipboard.Height != 0 {
-		for y := range m.clipboard.Height {
-			for x := range m.clipboard.Width {
-				c := m.clipboard.MustGet(x, y)
-				crop.SetByte(x, y, c.Value, c.Style)
-			}
-		}
-	}
-
 	// selection mask
-	if m.selectionMask.Width > 0 && m.selectionMask.Height > 0 {
+	if m.selectionMask.Width != 0 && m.selectionMask.Height != 0 {
 		minX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X))
 		minY := max(0, min(m.canvas.Data.Height, m.selectionTopLeft.Y))
 		maxX := max(0, min(m.canvas.Data.Width, m.selectionTopLeft.X+m.selectionMask.Width))
