@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -46,11 +45,8 @@ type MainWidget struct {
 	sw int
 	sh int
 
-	cursorX     int
-	cursorY     int
-	lastCursorX int
-	lastCursorY int
-	lastPaint   time.Time
+	cursorX int
+	cursorY int
 
 	// Position of top-left corner of buffer
 	offsetX int
@@ -106,6 +102,7 @@ func Init(a *App, screen tcell.Screen) *MainWidget {
 
 	w.ScreenResize(screen.Size())
 	w.CenterCanvas()
+	w.ClearTool()
 	return w
 }
 
@@ -189,47 +186,6 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			}
 			m.colorPickState = ColorPickNone
 		}
-
-		if !m.hasTool && ev.Buttons()&tcell.Button1 != 0 {
-			cx, cy := ev.Position()
-			cx, cy = cx-m.sx-m.offsetX, cy-m.sy-m.offsetY
-
-			// if last paint time is sufficiently small and the distance is big enough,
-			// draw a line
-			// otherwise just place a stamp
-			dx, dy := cx-m.lastCursorX, cy-m.lastCursorY
-			dist := max(max(dx, -dx), max(dy, -dy))
-			st := tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor)
-			if ev.When().Sub(m.lastPaint).Seconds() < 0.1 && dist > 1 {
-				positions := LinePositions(
-					m.lastCursorX,
-					m.lastCursorY,
-					cx,
-					cy,
-				)
-				for _, p := range positions {
-					// m.canvas.Set(p.X, p.Y, m.brushCharacter, st)
-					m.canvas.FillRegion(
-						p.X-m.brushRadius/2,
-						p.Y-m.brushRadius/2,
-						m.brushRadius,
-						m.brushRadius,
-						Cell{Value: m.brushCharacter, Style: st},
-					)
-				}
-			} else {
-				m.canvas.FillRegion(
-					cx-m.brushRadius/2,
-					cy-m.brushRadius/2,
-					m.brushRadius,
-					m.brushRadius,
-					Cell{Value: m.brushCharacter, Style: st},
-				)
-			}
-
-			m.lastPaint = ev.When()
-			m.lastCursorX, m.lastCursorY = cx, cy
-		}
 	case *tcell.EventKey:
 		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Key() == tcell.KeyF1 {
 			if m.isPan {
@@ -242,12 +198,12 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			return
 		}
 
+		// FIXME: hack
 		if ev.Key() == tcell.KeyEscape {
-			if m.hasTool {
-				m.hasTool = false
-				m.currentTool = nil
-			} else {
+			if _, ok := m.currentTool.(*BrushTool); ok {
 				m.app.WillQuit = true
+			} else {
+				m.ClearTool()
 			}
 			return
 		}
@@ -553,8 +509,8 @@ func (m *MainWidget) SetTool(tool Tool) {
 }
 
 func (m *MainWidget) ClearTool() {
-	m.hasTool = false
-	m.currentTool = nil
+	m.hasTool = true
+	m.currentTool = &BrushTool{}
 	m.statusLine = ""
 }
 
