@@ -304,6 +304,13 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				return
 			}
 
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '[' {
+				t := &ResizeTool{}
+				t.SetDimsFromSelection(m.CurrentCanvas())
+				m.SetTool(t)
+				return
+			}
+
 			if m.colorSelectState == ColorSelectFg {
 				m.colorSelectState = ColorSelectNone
 				r := ev.Rune()
@@ -512,14 +519,14 @@ func (m *MainWidget) CenterCanvas() {
 }
 
 func (m *MainWidget) SetTool(tool Tool) {
-	m.Commit()
+	m.Rollback()
 	m.hasTool = true
 	m.currentTool = tool
 	m.statusLine = ""
 }
 
 func (m *MainWidget) ClearTool() {
-	m.Commit()
+	m.Rollback()
 	m.hasTool = true
 	m.currentTool = &BrushTool{}
 	m.statusLine = ""
@@ -668,4 +675,14 @@ func (m *MainWidget) Rollback() {
 	}
 	m.isStaging = false
 	m.stagingCanvas = nil
+}
+
+func (m *MainWidget) CurrentCanvas() *Buffer {
+	if m.isStaging {
+		return m.stagingCanvas
+	} else if m.undoHistoryPos > 0 {
+		return m.bufferHistory[len(m.bufferHistory)-m.undoHistoryPos]
+	} else {
+		return m.canvas
+	}
 }
