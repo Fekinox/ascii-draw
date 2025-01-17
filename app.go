@@ -97,6 +97,7 @@ func (a *App) Loop() {
 			switch ev := ev.(type) {
 			case *tcell.EventResize:
 				Screen.Sync()
+				a.widget.HandleEvent(ev)
 			case *tcell.EventKey:
 				if ev.Key() == tcell.KeyCtrlL {
 					Screen.Sync()
