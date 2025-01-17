@@ -497,7 +497,6 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 			}
 		}
 	}
-
 }
 
 func (m *MainWidget) ScreenResize(sw, sh int) {
@@ -510,6 +509,22 @@ func (m *MainWidget) ScaleOffset(oldsw, oldsh, newsw, newsh int) {
 	sfx, sfy := float64(newsw)/float64(oldsw), float64(newsh)/float64(oldsh)
 	m.offsetX = int(float64(ocx)*sfx) + newsw/2
 	m.offsetY = int(float64(ocy)*sfy) + newsh/2
+}
+
+func (m *MainWidget) ResizeCanvas(newRect Area) {
+	m.Stage()
+	m.stagingCanvas = MakeBuffer(newRect.Width, newRect.Height)
+	for y := range m.canvas.Data.Height {
+		for x := range m.canvas.Data.Width {
+			nx, ny := x-newRect.X, y-newRect.Y
+			m.stagingCanvas.Data.Set(nx, ny, m.canvas.Data.MustGet(x, y))
+			m.stagingCanvas.SelectionMask.Set(nx, ny, m.canvas.SelectionMask.MustGet(x, y))
+		}
+	}
+	m.Commit()
+	m.offsetX += newRect.X
+	m.offsetY += newRect.Y
+	m.ClearTool()
 }
 
 func (m *MainWidget) CenterCanvas() {
