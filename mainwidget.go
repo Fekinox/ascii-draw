@@ -25,6 +25,15 @@ const (
 	ColorSelectBg
 )
 
+type LockMask int
+
+const (
+	LockMaskAlpha LockMask = 1 << iota
+	LockMaskChar
+	LockMaskFg
+	LockMaskBg
+)
+
 var colorMap = map[rune]int{
 	'1': 0, '!': 8,
 	'2': 1, '@': 9,
@@ -76,6 +85,7 @@ type MainWidget struct {
 	fgColor        tcell.Color
 	bgColor        tcell.Color
 	brushRadius    int
+	lockMask       LockMask
 
 	clipboard Grid[Cell]
 
@@ -311,6 +321,26 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				return
 			}
 
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '1' {
+				m.lockMask ^= LockMaskAlpha
+				return
+			}
+
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '2' {
+				m.lockMask ^= LockMaskChar
+				return
+			}
+
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '3' {
+				m.lockMask ^= LockMaskFg
+				return
+			}
+
+			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '4' {
+				m.lockMask ^= LockMaskBg
+				return
+			}
+
 			if m.colorSelectState == ColorSelectFg {
 				m.colorSelectState = ColorSelectNone
 				r := ev.Rune()
@@ -417,6 +447,21 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 			c = 'n'
 		}
 		p.SetByte(x+w-2, y, c, tcell.StyleDefault.Background(m.bgColor))
+	}
+
+	// Lock mask
+	SetString(p, x+w-38, y, fmt.Sprintf("lock: ____"), tcell.StyleDefault)
+	if m.lockMask&LockMaskAlpha != 0 {
+		p.SetByte(x+w-32, y, 'a', tcell.StyleDefault)
+	}
+	if m.lockMask&LockMaskChar != 0 {
+		p.SetByte(x+w-31, y, 'c', tcell.StyleDefault)
+	}
+	if m.lockMask&LockMaskFg != 0 {
+		p.SetByte(x+w-30, y, 'f', tcell.StyleDefault)
+	}
+	if m.lockMask&LockMaskBg != 0 {
+		p.SetByte(x+w-29, y, 'g', tcell.StyleDefault)
 	}
 
 	// color picker
