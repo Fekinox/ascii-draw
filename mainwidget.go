@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -94,6 +95,9 @@ type MainWidget struct {
 
 	bufferHistory  []*Buffer
 	undoHistoryPos int
+
+	isPasting bool
+	pasteData []byte
 }
 
 var (
@@ -128,7 +132,33 @@ func (m *MainWidget) HandleAction(action Action) {
 }
 
 func (m *MainWidget) HandleEvent(event tcell.Event) {
+	if m.isPasting {
+		switch ev := event.(type) {
+		case *tcell.EventPaste:
+			if ev.End() {
+				// set clipboard and return to stamp tool
+				m.SetClipboardFromPasteData()
+				m.SetTool(&StampTool{})
+				m.isPasting = false
+			}
+		case *tcell.EventKey:
+			switch ev.Key() {
+			case tcell.KeyRune:
+				r := ev.Rune()
+				if r > unicode.MaxASCII {
+					r = '?'
+				}
+				m.pasteData = append(m.pasteData, byte(r))
+			default:
+				m.pasteData = append(m.pasteData, '\n')
+			}
+		}
+		return
+	}
 	switch ev := event.(type) {
+	case *tcell.EventPaste:
+		m.isPasting = true
+		m.pasteData = []byte{}
 	case *tcell.EventResize:
 		oldsw, oldsh := m.sw, m.sh
 		m.ScreenResize(ev.Size())
@@ -687,6 +717,36 @@ func (m *MainWidget) ReplaceSelectionMask(topLeft Position, mask Grid[bool]) {
 
 func (m *MainWidget) SetClipboard() {
 	m.clipboard = m.canvas.CopySelection()
+}
+
+func (m *MainWidget) SetClipboardFromPasteData() {
+	var width, height int
+	var w = 0
+	for _, c := range m.pasteData {
+		if c == '\n' {
+			height++
+			w = 0
+		} else {
+			w++
+			width = max(width, w)
+		}
+	}
+	clip := MakeGrid(width+1, height+1, Cell{Value: ' '})
+
+	var x, y int
+	for _, c := range m.pasteData {
+		if c == '\n' {
+			x, y = 0, y+1
+		} else {
+			clip.Set(x, y, Cell{
+				Value: c,
+				Style: tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
+			})
+			x++
+		}
+	}
+
+	m.clipboard = clip
 }
 
 func (m *MainWidget) Stage() {
