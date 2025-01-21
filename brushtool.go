@@ -61,4 +61,5 @@ func (b *BrushTool) HandleEvent(m *MainWidget, event tcell.Event) {
 }
 
 func (b *BrushTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
+	SetString(p, x+m.sx, y+m.sy-1, "Brush Tool", tcell.StyleDefault)
 }

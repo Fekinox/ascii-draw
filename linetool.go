@@ -36,6 +36,7 @@ func (l *LineTool) HandleEvent(m *MainWidget, event tcell.Event) {
 }
 
 func (l *LineTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
+	SetString(p, x+m.sx, y+m.sy-1, "Line Tool", tcell.StyleDefault)
 	if l.isDragging {
 		crop := &CropPainter{
 			p: p,

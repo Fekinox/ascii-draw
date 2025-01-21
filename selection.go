@@ -36,6 +36,7 @@ func (l *LassoTool) HandleEvent(m *MainWidget, event tcell.Event) {
 }
 
 func (l *LassoTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
+	SetString(p, x+m.sx, y+m.sy-1, "Lasso Tool", tcell.StyleDefault)
 	if l.isLassoing {
 		j := len(l.lassoPoints) - 1
 		for i, p1 := range l.lassoPoints {

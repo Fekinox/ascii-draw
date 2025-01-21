@@ -193,6 +193,7 @@ func (r *ResizeTool) HandleEvent(m *MainWidget, event tcell.Event) {
 }
 
 func (r *ResizeTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
+	SetString(p, x+m.sx, y+m.sy-1, "Resize Tool", tcell.StyleDefault)
 	crop := &CropPainter{
 		p: p,
 		area: Area{
