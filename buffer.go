@@ -120,8 +120,9 @@ func (b *Buffer) SetCell(x int, y int, cell Cell, mask LockMask) {
 	}
 
 	targetCell := b.Data.MustGet(x, y)
+	_, targetBg, _ := targetCell.Style.Decompose()
 	if mask&LockMaskAlpha != 0 && (targetCell.Value == ' ' || targetCell.Value == 0) &&
-		targetCell.Style == tcell.StyleDefault {
+		targetBg == tcell.ColorDefault {
 		return
 	}
 
@@ -354,8 +355,9 @@ func (b *Buffer) Stamp(clipboard Grid[Cell], px, py int, mask LockMask) {
 	for y := range clipboard.Height {
 		for x := range clipboard.Width {
 			stampCell := clipboard.MustGet(x, y)
+			_, stampBg, _ := stampCell.Style.Decompose()
 
-			if stampCell.Value == ' ' && stampCell.Style == tcell.StyleDefault {
+			if stampCell.Value == ' ' && stampBg == tcell.ColorDefault {
 				continue
 			}
 
