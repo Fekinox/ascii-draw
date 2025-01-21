@@ -238,12 +238,20 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 			}
 
 			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'f' {
-				m.colorSelectState = ColorSelectFg
+				if m.colorSelectState == ColorSelectNone {
+					m.colorSelectState = ColorSelectFg
+				} else {
+					m.colorSelectState = ColorSelectNone
+				}
 				return
 			}
 
 			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'g' {
-				m.colorSelectState = ColorSelectBg
+				if m.colorSelectState == ColorSelectNone {
+					m.colorSelectState = ColorSelectBg
+				} else {
+					m.colorSelectState = ColorSelectNone
+				}
 				return
 			}
 
