@@ -109,6 +109,37 @@ func (b *Buffer) Set(x int, y int, v byte, s tcell.Style) {
 	})
 }
 
+func (b *Buffer) SetCell(x int, y int, cell Cell, mask LockMask) {
+	fg, bg, _ := cell.Style.Decompose()
+	if !b.Data.InBounds(x, y) || !b.SelectionMask.InBounds(x, y) {
+		return
+	}
+
+	if b.activeSelection && !b.SelectionMask.MustGet(x, y) {
+		return
+	}
+
+	targetCell := b.Data.MustGet(x, y)
+	if mask&LockMaskAlpha != 0 && (targetCell.Value == ' ' || targetCell.Value == 0) &&
+		targetCell.Style == tcell.StyleDefault {
+		return
+	}
+
+	if mask&LockMaskChar == 0 {
+		targetCell.Value = cell.Value
+	}
+
+	if mask&LockMaskFg == 0 {
+		targetCell.Style = targetCell.Style.Foreground(fg)
+	}
+
+	if mask&LockMaskBg == 0 {
+		targetCell.Style = targetCell.Style.Background(bg)
+	}
+
+	b.Data.Set(x, y, targetCell)
+}
+
 func (b *Buffer) SetString(x int, y int, s []byte, st tcell.Style) {
 	for i, ch := range s {
 		b.Data.Set(x+i, y, Cell{
@@ -307,37 +338,28 @@ func (b *Buffer) TranslateBlankTransparent(
 }
 
 func (b *Buffer) FillRegion(x, y, w, h int, cell Cell, mask LockMask) {
-	lockedAlpha := mask&LockMaskAlpha != 0
-	fg, bg, _ := cell.Style.Decompose()
 	minX := max(0, min(b.Data.Width, x))
 	minY := max(0, min(b.Data.Height, y))
 	maxX := max(0, min(b.Data.Width, x+w))
 	maxY := max(0, min(b.Data.Height, y+h))
 	for yy := minY; yy < maxY; yy++ {
 		for xx := minX; xx < maxX; xx++ {
-			ok := true
-			if b.activeSelection {
-				m, o := b.SelectionMask.Get(xx, yy)
-				ok = m && o
-			}
-			if !ok {
+			b.SetCell(xx, yy, cell, mask)
+		}
+	}
+}
+
+func (b *Buffer) Stamp(clipboard Grid[Cell], px, py int, mask LockMask) {
+	dx, dy := -clipboard.Width/2, -clipboard.Height/2
+	for y := range clipboard.Height {
+		for x := range clipboard.Width {
+			stampCell := clipboard.MustGet(x, y)
+
+			if stampCell.Value == ' ' && stampCell.Style == tcell.StyleDefault {
 				continue
-			}
-			c := b.Data.MustGet(xx, yy)
-			if lockedAlpha && (c.Value == ' ' || c.Value == 0) {
-				continue
-			}
-			if mask&LockMaskChar == 0 {
-				c.Value = cell.Value
-			}
-			if mask&LockMaskFg == 0 {
-				c.Style = c.Style.Foreground(fg)
-			}
-			if mask&LockMaskBg == 0 {
-				c.Style = c.Style.Background(bg)
 			}
 
-			b.Data.Set(xx, yy, c)
+			b.SetCell(x+px+dx, y+py+dy, stampCell, mask)
 		}
 	}
 }
@@ -357,43 +379,6 @@ func (b *Buffer) SetSelection(mask Grid[bool], topLeft Position) {
 func (b *Buffer) BrushStrokes(radius int, cell Cell, points []Position, mask LockMask) {
 	for _, pt := range points {
 		b.FillRegion(pt.X-radius/2, pt.Y-radius/2, radius, radius, cell, mask)
-	}
-}
-
-func (b *Buffer) Stamp(other *Buffer, clipboard Grid[Cell], points []Position, mask LockMask) {
-	lockedAlpha := mask&LockMaskAlpha != 0
-	dx, dy := -clipboard.Width/2, -clipboard.Height/2
-	for _, pt := range points {
-		for y := range clipboard.Height {
-			for x := range clipboard.Width {
-				stampCell := clipboard.MustGet(x, y)
-				fg, bg, _ := stampCell.Style.Decompose()
-				ok := true
-				if b.activeSelection {
-					m, o := b.SelectionMask.Get(x+pt.X+dx, y+pt.Y+dy)
-					ok = m && o
-				}
-
-				if !ok || stampCell.Value == ' ' {
-					continue
-				}
-				targetCell, ok := b.Data.Get(x+pt.X+dx, y+pt.Y+dy)
-				if !ok || (lockedAlpha && (targetCell.Value == ' ' || targetCell.Value == 0)) {
-					continue
-				}
-				if mask&LockMaskChar == 0 {
-					targetCell.Value = stampCell.Value
-				}
-				if mask&LockMaskFg == 0 {
-					targetCell.Style = targetCell.Style.Foreground(fg)
-				}
-				if mask&LockMaskBg == 0 {
-					targetCell.Style = targetCell.Style.Background(bg)
-				}
-
-				b.Data.Set(x+pt.X+dx, y+pt.Y+dy, targetCell)
-			}
-		}
 	}
 }
 

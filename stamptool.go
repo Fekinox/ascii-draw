@@ -3,8 +3,9 @@ package main
 import "github.com/gdamore/tcell/v2"
 
 type StampTool struct {
-	isDragging bool
-	points     []Position
+	isDragging   bool
+	hasLastPaint bool
+	lastPaintPos Position
 }
 
 func (l *StampTool) HandleEvent(m *MainWidget, event tcell.Event) {
@@ -18,18 +19,19 @@ func (l *StampTool) HandleEvent(m *MainWidget, event tcell.Event) {
 		if ev.Buttons()&tcell.Button1 != 0 {
 			if !l.isDragging {
 				l.isDragging = true
-				l.points = nil
+				l.hasLastPaint = false
 			}
+
+			m.Stage()
 			p := Position{X: cx, Y: cy}
-			if len(l.points) == 0 || l.points[len(l.points)-1] != p {
-				l.points = append(l.points, p)
+			if !l.hasLastPaint || l.lastPaintPos != p {
+				m.stagingCanvas.Stamp(m.clipboard, p.X, p.Y, m.lockMask)
 			}
+			l.hasLastPaint = true
+			l.lastPaintPos = p
 		} else if l.isDragging {
 			l.isDragging = false
-			m.Stage()
-			m.stagingCanvas.Stamp(m.canvas, m.clipboard, l.points, m.lockMask)
 			m.Commit()
-			l.points = nil
 		}
 	}
 }
@@ -50,37 +52,11 @@ func (l *StampTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) 
 			Height: m.canvas.Data.Height,
 		},
 	}
-	if l.isDragging {
-		for _, pt := range l.points {
-			if m.canvas.Data.InBounds(pt.X, pt.Y) {
-				// p.SetByte(
-				// 	pt.X,
-				// 	pt.Y,
-				// 	m.brushCharacter,
-				// 	tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
-				// )
-				for y := range m.clipboard.Height {
-					for x := range m.clipboard.Width {
-						c := m.clipboard.MustGet(x, y)
-						if c.Value != ' ' {
-							crop.SetByte(
-								pt.X+x+dx+m.sx+m.offsetX,
-								pt.Y+y+dy+m.sy+m.offsetY,
-								c.Value,
-								c.Style,
-							)
-						}
-					}
-				}
-			}
-		}
-	} else {
-		for y := range m.clipboard.Height {
-			for x := range m.clipboard.Width {
-				c := m.clipboard.MustGet(x, y)
-				if c.Value != ' ' {
-					crop.SetByte(m.cursorX+x+dx, m.cursorY+y+dy, c.Value, c.Style)
-				}
+	for y := range m.clipboard.Height {
+		for x := range m.clipboard.Width {
+			c := m.clipboard.MustGet(x, y)
+			if c.Value != ' ' {
+				crop.SetByte(m.cursorX+x+dx, m.cursorY+y+dy, c.Value, c.Style)
 			}
 		}
 	}

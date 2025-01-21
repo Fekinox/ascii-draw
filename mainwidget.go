@@ -485,7 +485,7 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 		DrawDragIndicator(
 			p, cx, cy, m.colorPickOriginX+m.sx, m.colorPickOriginY+m.sy,
 		)
-	} else {
+	} else if m.IsPaintTool() {
 		cx, cy := m.cursorX+m.sx, m.cursorY+m.sy
 		FillRegion(
 			p,
@@ -753,4 +753,14 @@ func (m *MainWidget) CurrentCanvas() *Buffer {
 	} else {
 		return m.canvas
 	}
+}
+
+func (m *MainWidget) IsPaintTool() bool {
+	if _, ok := m.currentTool.(*BrushTool); ok {
+		return true
+	}
+	if _, ok := m.currentTool.(*LineTool); ok {
+		return true
+	}
+	return false
 }
