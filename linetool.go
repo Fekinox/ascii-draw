@@ -25,7 +25,7 @@ func (l *LineTool) HandleEvent(m *MainWidget, event tcell.Event) {
 			}
 			m.Stage()
 			linePositions := LinePositions(l.origX, l.origY, cx, cy)
-			m.stagingCanvas.BrushStrokes(m.brushRadius, cell, linePositions)
+			m.stagingCanvas.BrushStrokes(m.brushRadius, cell, linePositions, m.lockMask)
 			m.Commit()
 		}
 	case *tcell.EventKey:

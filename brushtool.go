@@ -35,16 +35,16 @@ func (b *BrushTool) HandleEvent(m *MainWidget, event tcell.Event) {
 					posns := LinePositions(b.lastPaintPos.X, b.lastPaintPos.Y, cx, cy)
 					for _, pt := range posns[1 : len(posns)-1] {
 						m.stagingCanvas.FillRegion(
-							pt.X, pt.Y, m.brushRadius, m.brushRadius, cell,
+							pt.X, pt.Y, m.brushRadius, m.brushRadius, cell, m.lockMask,
 						)
 					}
 				}
 				m.stagingCanvas.FillRegion(
-					p.X, p.Y, m.brushRadius, m.brushRadius, cell,
+					p.X, p.Y, m.brushRadius, m.brushRadius, cell, m.lockMask,
 				)
 			} else {
 				m.stagingCanvas.FillRegion(
-					p.X, p.Y, m.brushRadius, m.brushRadius, cell,
+					p.X, p.Y, m.brushRadius, m.brushRadius, cell, m.lockMask,
 				)
 			}
 			b.lastPaintPos = p

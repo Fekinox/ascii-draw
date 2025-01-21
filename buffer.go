@@ -306,7 +306,9 @@ func (b *Buffer) TranslateBlankTransparent(
 	}
 }
 
-func (b *Buffer) FillRegion(x, y, w, h int, cell Cell) {
+func (b *Buffer) FillRegion(x, y, w, h int, cell Cell, mask LockMask) {
+	lockedAlpha := mask&LockMaskAlpha != 0
+	fg, bg, _ := cell.Style.Decompose()
 	minX := max(0, min(b.Data.Width, x))
 	minY := max(0, min(b.Data.Height, y))
 	maxX := max(0, min(b.Data.Width, x+w))
@@ -318,9 +320,24 @@ func (b *Buffer) FillRegion(x, y, w, h int, cell Cell) {
 				m, o := b.SelectionMask.Get(xx, yy)
 				ok = m && o
 			}
-			if ok {
-				b.Data.Set(xx, yy, cell)
+			if !ok {
+				continue
 			}
+			c := b.Data.MustGet(xx, yy)
+			if lockedAlpha && (c.Value == ' ' || c.Value == 0) {
+				continue
+			}
+			if mask&LockMaskChar == 0 {
+				c.Value = cell.Value
+			}
+			if mask&LockMaskFg == 0 {
+				c.Style = c.Style.Foreground(fg)
+			}
+			if mask&LockMaskBg == 0 {
+				c.Style = c.Style.Background(bg)
+			}
+
+			b.Data.Set(xx, yy, c)
 		}
 	}
 }
@@ -337,27 +354,44 @@ func (b *Buffer) SetSelection(mask Grid[bool], topLeft Position) {
 	b.activeSelection = true
 }
 
-func (b *Buffer) BrushStrokes(radius int, cell Cell, points []Position) {
+func (b *Buffer) BrushStrokes(radius int, cell Cell, points []Position, mask LockMask) {
 	for _, pt := range points {
-		b.FillRegion(pt.X-radius/2, pt.Y-radius/2, radius, radius, cell)
+		b.FillRegion(pt.X-radius/2, pt.Y-radius/2, radius, radius, cell, mask)
 	}
 }
 
-func (b *Buffer) Stamp(other *Buffer, clipboard Grid[Cell], points []Position) {
+func (b *Buffer) Stamp(other *Buffer, clipboard Grid[Cell], points []Position, mask LockMask) {
+	lockedAlpha := mask&LockMaskAlpha != 0
 	dx, dy := -clipboard.Width/2, -clipboard.Height/2
 	for _, pt := range points {
 		for y := range clipboard.Height {
 			for x := range clipboard.Width {
-				c := clipboard.MustGet(x, y)
+				stampCell := clipboard.MustGet(x, y)
+				fg, bg, _ := stampCell.Style.Decompose()
 				ok := true
 				if b.activeSelection {
 					m, o := b.SelectionMask.Get(x+pt.X+dx, y+pt.Y+dy)
 					ok = m && o
 				}
 
-				if ok && c.Value != ' ' {
-					b.Data.Set(x+pt.X+dx, y+pt.Y+dy, c)
+				if !ok || stampCell.Value == ' ' {
+					continue
 				}
+				targetCell, ok := b.Data.Get(x+pt.X+dx, y+pt.Y+dy)
+				if !ok || (lockedAlpha && (targetCell.Value == ' ' || targetCell.Value == 0)) {
+					continue
+				}
+				if mask&LockMaskChar == 0 {
+					targetCell.Value = stampCell.Value
+				}
+				if mask&LockMaskFg == 0 {
+					targetCell.Style = targetCell.Style.Foreground(fg)
+				}
+				if mask&LockMaskBg == 0 {
+					targetCell.Style = targetCell.Style.Background(bg)
+				}
+
+				b.Data.Set(x+pt.X+dx, y+pt.Y+dy, targetCell)
 			}
 		}
 	}

@@ -27,7 +27,7 @@ func (l *StampTool) HandleEvent(m *MainWidget, event tcell.Event) {
 		} else if l.isDragging {
 			l.isDragging = false
 			m.Stage()
-			m.stagingCanvas.Stamp(m.canvas, m.clipboard, l.points)
+			m.stagingCanvas.Stamp(m.canvas, m.clipboard, l.points, m.lockMask)
 			m.Commit()
 			l.points = nil
 		}
