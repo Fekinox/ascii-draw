@@ -217,136 +217,117 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 		}
 
 		if ev.Key() == tcell.KeyRune {
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'p' {
-				m.SetTool(MakePromptTool(m.Export, "export path..."))
-				return
-			}
+			if ev.Modifiers()&tcell.ModAlt != 0 {
+				switch ev.Rune() {
+				case 'p':
+					m.SetTool(MakePromptTool(m.Export, "export path..."))
+					return
 
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'i' {
-				m.SetTool(MakePromptTool(m.Import, "import path..."))
-				return
-			}
+				case 'i':
+					m.SetTool(MakePromptTool(m.Import, "import path..."))
+					return
 
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 's' {
-				m.SetTool(MakePromptTool(m.Save, "save path..."))
-				return
-			}
+				case 's':
+					m.SetTool(MakePromptTool(m.Save, "save path..."))
+					return
 
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'l' {
-				m.SetTool(MakePromptTool(m.Load, "load path..."))
-				return
-			}
+				case 'l':
+					m.SetTool(MakePromptTool(m.Load, "load path..."))
+					return
 
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'f' {
-				if m.colorSelectState == ColorSelectNone {
-					m.colorSelectState = ColorSelectFg
-				} else {
-					m.colorSelectState = ColorSelectNone
+				case 'f':
+					if m.colorSelectState == ColorSelectNone {
+						m.colorSelectState = ColorSelectFg
+					} else {
+						m.colorSelectState = ColorSelectNone
+					}
+					return
+
+				case 'g':
+					if m.colorSelectState == ColorSelectNone {
+						m.colorSelectState = ColorSelectBg
+					} else {
+						m.colorSelectState = ColorSelectNone
+					}
+					return
+
+				case 'n':
+					m.Stage()
+					m.stagingCanvas = MakeBuffer(m.canvas.Data.Width, m.canvas.Data.Height)
+					m.Commit()
+					return
+
+				case 'r':
+					m.SetTool(&LassoTool{})
+					return
+
+				case 't':
+					m.SetTool(&TranslateTool{})
+					return
+
+				case 'q':
+					m.SetTool(&LineTool{})
+					return
+
+				case 'a':
+					m.Stage()
+					m.stagingCanvas.Deselect()
+					m.Commit()
+					return
+
+				case 'c':
+					m.SetClipboard()
+					return
+
+				case 'x':
+					m.SetClipboard()
+					m.Stage()
+					m.stagingCanvas.ClearSelection()
+					m.Commit()
+					return
+
+				case 'v':
+					m.SetTool(&StampTool{})
+					return
+
+				case '=':
+					m.brushRadius = min(MAX_BRUSH_RADIUS, m.brushRadius+1)
+					return
+
+				case '-':
+					m.brushRadius = max(1, m.brushRadius-1)
+					return
+
+				case 'z':
+					m.undoHistoryPos = min(len(m.bufferHistory), m.undoHistoryPos+1)
+					return
+
+				case 'Z':
+					m.undoHistoryPos = max(0, m.undoHistoryPos-1)
+					return
+
+				case '[':
+					t := &ResizeTool{}
+					t.SetDimsFromSelection(m.CurrentCanvas())
+					m.SetTool(t)
+					return
+
+				case '1':
+					m.lockMask ^= LockMaskAlpha
+					return
+
+				case '2':
+					m.lockMask ^= LockMaskChar
+					return
+
+				case '3':
+					m.lockMask ^= LockMaskFg
+					return
+
+				case '4':
+					m.lockMask ^= LockMaskBg
+					return
 				}
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'g' {
-				if m.colorSelectState == ColorSelectNone {
-					m.colorSelectState = ColorSelectBg
-				} else {
-					m.colorSelectState = ColorSelectNone
-				}
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'n' {
-				m.Stage()
-				m.stagingCanvas = MakeBuffer(m.canvas.Data.Width, m.canvas.Data.Height)
-				m.Commit()
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'r' {
-				m.SetTool(&LassoTool{})
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 't' {
-				m.SetTool(&TranslateTool{})
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'q' {
-				m.SetTool(&LineTool{})
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'a' {
-				m.Stage()
-				m.stagingCanvas.Deselect()
-				m.Commit()
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'c' {
-				m.SetClipboard()
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'x' {
-				m.SetClipboard()
-				m.Stage()
-				m.stagingCanvas.ClearSelection()
-				m.Commit()
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'v' {
-				m.SetTool(&StampTool{})
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '=' {
-				m.brushRadius = min(MAX_BRUSH_RADIUS, m.brushRadius+1)
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '-' {
-				m.brushRadius = max(1, m.brushRadius-1)
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'z' {
-				m.undoHistoryPos = min(len(m.bufferHistory), m.undoHistoryPos+1)
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == 'Z' {
-				m.undoHistoryPos = max(0, m.undoHistoryPos-1)
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '[' {
-				t := &ResizeTool{}
-				t.SetDimsFromSelection(m.CurrentCanvas())
-				m.SetTool(t)
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '1' {
-				m.lockMask ^= LockMaskAlpha
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '2' {
-				m.lockMask ^= LockMaskChar
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '3' {
-				m.lockMask ^= LockMaskFg
-				return
-			}
-
-			if ev.Modifiers()&tcell.ModAlt != 0 && ev.Rune() == '4' {
-				m.lockMask ^= LockMaskBg
-				return
 			}
 
 			if m.colorSelectState == ColorSelectFg {
