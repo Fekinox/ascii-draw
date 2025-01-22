@@ -19,7 +19,7 @@ const (
 )
 
 const (
-	ResizeToolTop ResizeToolEdge = iota
+	ResizeToolTop ResizeToolEdge = 1 << iota
 	ResizeToolBottom
 	ResizeToolLeft
 	ResizeToolRight
@@ -165,8 +165,7 @@ func (r *ResizeTool) HandleEvent(m *MainWidget, event tcell.Event) {
 				r.stagingDims.X, r.stagingDims.Y = minX, minY
 				r.stagingDims.Width, r.stagingDims.Height = maxX-minX+1, maxY-minY+1
 			} else if r.state == ResizeToolExpanding {
-				switch r.expandEdge {
-				case ResizeToolLeft:
+				if r.expandEdge&ResizeToolLeft != 0 {
 					if r.dims.Width-dx >= 1 {
 						r.stagingDims.X = r.dims.X + dx
 						r.stagingDims.Width = r.dims.Width - dx
@@ -174,16 +173,17 @@ func (r *ResizeTool) HandleEvent(m *MainWidget, event tcell.Event) {
 						r.stagingDims.X = r.dims.X + r.dims.Width
 						r.stagingDims.Width = dx - r.dims.Width
 					}
-				case ResizeToolRight:
+				}
+
+				if r.expandEdge&ResizeToolRight != 0 {
 					if r.dims.Width+dx >= 1 {
 						r.stagingDims.Width = r.dims.Width + dx
 					} else {
 						r.stagingDims.X = r.dims.X + r.dims.Width + dx
 						r.stagingDims.Width = -r.dims.Width - dx
 					}
-				case ResizeToolTop:
-					r.stagingDims.Y = r.dims.Y + dy
-					r.stagingDims.Height = r.dims.Height - dy
+				}
+				if r.expandEdge&ResizeToolTop != 0 {
 					if r.dims.Height-dy >= 1 {
 						r.stagingDims.Y = r.dims.Y + dy
 						r.stagingDims.Height = r.dims.Height - dy
@@ -191,7 +191,8 @@ func (r *ResizeTool) HandleEvent(m *MainWidget, event tcell.Event) {
 						r.stagingDims.Y = r.dims.Y + r.dims.Height
 						r.stagingDims.Height = dy - r.dims.Height
 					}
-				case ResizeToolBottom:
+				}
+				if r.expandEdge&ResizeToolBottom != 0 {
 					if r.dims.Height+dy >= 1 {
 						r.stagingDims.Height = r.dims.Height + dy
 					} else {
