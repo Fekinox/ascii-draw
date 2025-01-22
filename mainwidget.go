@@ -107,7 +107,7 @@ var (
 func Init(a *App, screen tcell.Screen) *MainWidget {
 	w := &MainWidget{
 		app:            a,
-		canvas:         MakeBuffer(100, 60),
+		canvas:         MakeBuffer(80, 24),
 		brushCharacter: '#',
 		brushRadius:    1,
 	}

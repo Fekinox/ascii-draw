@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"slices"
 
@@ -166,15 +167,37 @@ func (r *ResizeTool) HandleEvent(m *MainWidget, event tcell.Event) {
 			} else if r.state == ResizeToolExpanding {
 				switch r.expandEdge {
 				case ResizeToolLeft:
-					r.stagingDims.X = r.dims.X + dx
-					r.stagingDims.Width = r.dims.Width - dx
+					if r.dims.Width-dx >= 1 {
+						r.stagingDims.X = r.dims.X + dx
+						r.stagingDims.Width = r.dims.Width - dx
+					} else {
+						r.stagingDims.X = r.dims.X + r.dims.Width
+						r.stagingDims.Width = dx - r.dims.Width
+					}
 				case ResizeToolRight:
-					r.stagingDims.Width = r.dims.Width + dx
+					if r.dims.Width+dx >= 1 {
+						r.stagingDims.Width = r.dims.Width + dx
+					} else {
+						r.stagingDims.X = r.dims.X + r.dims.Width + dx
+						r.stagingDims.Width = -r.dims.Width - dx
+					}
 				case ResizeToolTop:
 					r.stagingDims.Y = r.dims.Y + dy
 					r.stagingDims.Height = r.dims.Height - dy
+					if r.dims.Height-dy >= 1 {
+						r.stagingDims.Y = r.dims.Y + dy
+						r.stagingDims.Height = r.dims.Height - dy
+					} else {
+						r.stagingDims.Y = r.dims.Y + r.dims.Height
+						r.stagingDims.Height = dy - r.dims.Height
+					}
 				case ResizeToolBottom:
-					r.stagingDims.Height = r.dims.Height + dy
+					if r.dims.Height+dy >= 1 {
+						r.stagingDims.Height = r.dims.Height + dy
+					} else {
+						r.stagingDims.Y = r.dims.Y + r.dims.Height + dy
+						r.stagingDims.Height = -r.dims.Height - dy
+					}
 				}
 			}
 		} else if r.state != ResizeToolNone {
@@ -221,4 +244,9 @@ func (r *ResizeTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64)
 		Height: d.Height + 2,
 	}
 	BorderBox(crop, a, tcell.StyleDefault.Foreground(tcell.ColorRed))
+	dimsString := fmt.Sprintf("%d x %d", d.Width, d.Height)
+	dimsStringX, dimsStringY := x+m.sx+ox+d.X-1, y+m.sy+oy+d.Y-2
+	dimsStringX = max(m.sx, min(m.sx+m.sw-len(dimsString), dimsStringX))
+	dimsStringY = max(m.sy, min(m.sy+m.sh-1, dimsStringY))
+	SetString(crop, dimsStringX, dimsStringY, dimsString, tcell.StyleDefault)
 }

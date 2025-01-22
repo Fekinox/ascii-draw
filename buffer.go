@@ -51,6 +51,11 @@ func Decode(u uint16, c *Cell) {
 	c.Style = c.Style.Foreground(fg).Background(bg)
 }
 
+func (c Cell) IsZero() bool {
+	_, bg, _ := c.Style.Decompose()
+	return c.Value == ' ' && bg == tcell.ColorDefault
+}
+
 type Buffer struct {
 	Data            Grid[Cell]
 	activeSelection bool

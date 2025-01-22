@@ -346,18 +346,18 @@ func DrawDragIndicator(
 	indRect := Area{
 		X:      x + 2,
 		Y:      y - 1,
-		Width:  10,
+		Width:  11,
 		Height: 3,
 	}
 	offset := y - ory
 
 	var s string
 	if offset < -2 {
-		s = "set fg"
+		s = "copy fg"
 	} else if offset > 2 {
-		s = "set bg"
+		s = "copy bg"
 	} else {
-		s = "set char"
+		s = "copy char"
 	}
 
 	BorderBox(p, origRect, tcell.StyleDefault)
