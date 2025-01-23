@@ -307,33 +307,17 @@ func DrawColorPickerState(
 	SetString(p, x+2, y-4, " char  ", tcell.StyleDefault)
 
 	// fg
-	if hoverFg == 0 {
-		p.SetByte(x+1, y-3, '_', tcell.StyleDefault)
-	} else {
-		var ch byte = 'b'
-		if hoverFg <= tcell.ColorGray {
-			ch = 'n'
-		}
-		p.SetByte(x+1, y-3, ch, tcell.StyleDefault.Background(hoverFg))
-	}
 	SetString(p, x+2, y-3, " fg    ", tcell.StyleDefault)
+	DrawColorSymbolFG(p, x+1, y-3, hoverFg)
 
 	// bg
-	if hoverBg == 0 {
-		p.SetByte(x+1, y-2, '_', tcell.StyleDefault)
-	} else {
-		var ch byte = 'b'
-		if hoverBg <= tcell.ColorGray {
-			ch = 'n'
-		}
-		p.SetByte(x+1, y-2, ch, tcell.StyleDefault.Background(hoverBg))
-	}
 	SetString(p, x+2, y-2, " bg    ", tcell.StyleDefault)
+	DrawColorSymbolBG(p, x+1, y-2, hoverBg)
 
 	BorderBox(p, rect, tcell.StyleDefault)
 }
 
-func DrawDragIndicator(
+func DrawColorPickDragIndicator(
 	p Painter,
 	x, y, orx, ory int,
 ) {
@@ -363,4 +347,102 @@ func DrawDragIndicator(
 	BorderBox(p, origRect, tcell.StyleDefault)
 	SetString(p, x+3, y, s, tcell.StyleDefault)
 	BorderBox(p, indRect, tcell.StyleDefault)
+}
+
+func DrawColorSymbolFG(
+	p Painter,
+	x, y int,
+	color tcell.Color,
+) {
+	st := tcell.StyleDefault
+	ch := byte('_')
+
+	if color > tcell.ColorDefault {
+		ch = 'b'
+		if color < tcell.ColorGray {
+			ch = 'n'
+		}
+		st = st.Foreground(color)
+		if color == tcell.ColorBlack || color == tcell.ColorGray {
+			st = st.Background(tcell.ColorSilver)
+		}
+	}
+
+	p.SetByte(x, y, ch, st)
+}
+
+func DrawColorSymbolBG(
+	p Painter,
+	x, y int,
+	color tcell.Color,
+) {
+	st := tcell.StyleDefault
+	ch := byte('_')
+
+	if color > tcell.ColorDefault {
+		ch = 'b'
+		if color < tcell.ColorGray {
+			ch = 'n'
+		}
+		st = st.Background(color).Foreground(tcell.ColorBlack)
+		if color == tcell.ColorBlack || color == tcell.ColorGray {
+			st = st.Foreground(tcell.ColorSilver)
+		}
+	}
+
+	p.SetByte(x, y, ch, st)
+}
+
+func DrawColorSelector(
+	p Painter,
+	x, y int,
+	colorSelectState ColorSelectState,
+) {
+	if colorSelectState == ColorSelectFg {
+		SetString(p, x+1, y, "fg: ", tcell.StyleDefault)
+	} else {
+		SetString(p, x+1, y, "bg: ", tcell.StyleDefault)
+	}
+
+	for i := range 8 {
+		xx, yy := i%4, i/4
+		color := tcell.Color(i) + tcell.ColorValid
+
+		var st tcell.Style
+		if colorSelectState == ColorSelectFg {
+			st = st.Foreground(color)
+			if color == tcell.ColorBlack || color == tcell.ColorGray {
+				st = st.Background(tcell.ColorSilver)
+			}
+		} else {
+			st = st.Background(color).Foreground(tcell.ColorBlack)
+			if color == tcell.ColorBlack || color == tcell.ColorGray {
+				st = st.Foreground(tcell.ColorSilver)
+			}
+		}
+
+		SetString(p, x+5+xx*4, y+yy*2, fmt.Sprintf(" %d ", i+1), st)
+	}
+
+	for i := range 8 {
+		xx, yy := i%4, i/4
+		color := tcell.Color(i+8) + tcell.ColorValid
+
+		var st tcell.Style
+		if colorSelectState == ColorSelectFg {
+			st = st.Foreground(color)
+			if color == tcell.ColorBlack || color == tcell.ColorGray {
+				st = st.Background(tcell.ColorSilver)
+			}
+		} else {
+			st = st.Background(color).Foreground(tcell.ColorBlack)
+			if color == tcell.ColorBlack || color == tcell.ColorGray {
+				st = st.Foreground(tcell.ColorSilver)
+			}
+		}
+
+		SetString(p, x+5+xx*4, y+yy*2+1, fmt.Sprintf("s+%d", i+1), st)
+	}
+
+	SetString(p, x+5+16, y, " ` ", tcell.StyleDefault)
 }

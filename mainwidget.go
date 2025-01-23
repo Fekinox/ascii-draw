@@ -266,7 +266,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 					return
 
 				case 'f':
-					if m.colorSelectState == ColorSelectNone {
+					if m.colorSelectState != ColorSelectFg {
 						m.colorSelectState = ColorSelectFg
 					} else {
 						m.colorSelectState = ColorSelectNone
@@ -274,7 +274,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 					return
 
 				case 'g':
-					if m.colorSelectState == ColorSelectNone {
+					if m.colorSelectState != ColorSelectBg {
 						m.colorSelectState = ColorSelectBg
 					} else {
 						m.colorSelectState = ColorSelectNone
@@ -448,25 +448,9 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	SetString(p, x+w-17, y, "char: ", tcell.StyleDefault)
 	p.SetByte(x+w-12, y, m.brushCharacter, tcell.StyleDefault)
 	SetString(p, x+w-10, y, "fg: ", tcell.StyleDefault)
-	if m.fgColor == 0 {
-		p.SetByte(x+w-7, y, '_', tcell.StyleDefault)
-	} else {
-		var c byte = 'b'
-		if m.fgColor <= tcell.ColorGray {
-			c = 'n'
-		}
-		p.SetByte(x+w-7, y, c, tcell.StyleDefault.Background(m.fgColor))
-	}
+	DrawColorSymbolFG(p, x+w-7, y, m.fgColor)
 	SetString(p, x+w-5, y, "bg: ", tcell.StyleDefault)
-	if m.bgColor == 0 {
-		p.SetByte(x+w-2, y, '_', tcell.StyleDefault)
-	} else {
-		var c byte = 'b'
-		if m.bgColor <= tcell.ColorGray {
-			c = 'n'
-		}
-		p.SetByte(x+w-2, y, c, tcell.StyleDefault.Background(m.bgColor))
-	}
+	DrawColorSymbolBG(p, x+w-2, y, m.bgColor)
 
 	// Lock mask
 	SetString(p, x+w-38, y, fmt.Sprintf("lock: ____"), tcell.StyleDefault)
@@ -493,7 +477,7 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 		)
 	} else if m.colorPickState == ColorPickDrag {
 		cx, cy := m.cursorX+m.sx, m.cursorY+m.sy
-		DrawDragIndicator(
+		DrawColorPickDragIndicator(
 			p, cx, cy, m.colorPickOriginX+m.sx, m.colorPickOriginY+m.sy,
 		)
 	} else if m.IsPaintTool() {
@@ -510,41 +494,7 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 
 	// color selector
 	if m.colorSelectState != ColorSelectNone {
-		if m.colorSelectState == ColorSelectFg {
-			SetString(p, x+1, y, "fg: ", tcell.StyleDefault)
-		} else {
-			SetString(p, x+1, y, "bg: ", tcell.StyleDefault)
-		}
-
-		for i := range 8 {
-			xx, yy := i%4, i/4
-			color := tcell.Color(i) + tcell.ColorValid
-
-			var st tcell.Style
-			if m.colorSelectState == ColorSelectFg {
-				st = st.Foreground(color)
-			} else {
-				st = st.Background(color).Foreground(tcell.ColorBlack)
-			}
-
-			SetString(p, x+5+xx*4, y+yy*2, fmt.Sprintf(" %d ", i+1), st)
-		}
-
-		for i := range 8 {
-			xx, yy := i%4, i/4
-			color := tcell.Color(i+8) + tcell.ColorValid
-
-			var st tcell.Style
-			if m.colorSelectState == ColorSelectFg {
-				st = st.Foreground(color)
-			} else {
-				st = st.Background(color).Foreground(tcell.ColorBlack)
-			}
-
-			SetString(p, x+5+xx*4, y+yy*2+1, fmt.Sprintf("s+%d", i+1), st)
-		}
-
-		SetString(p, x+5+16, y, " ` ", tcell.StyleDefault)
+		DrawColorSelector(p, x, y+1, m.colorSelectState)
 	}
 
 	// selection mask
