@@ -238,17 +238,21 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 
 		// FIXME: hack
 		if ev.Key() == tcell.KeyEscape {
-			if _, ok := m.currentTool.(*BrushTool); ok {
-				m.app.WillQuit = true
-			} else {
-				m.ClearTool()
-			}
+			m.ClearTool()
 			return
 		}
 
 		if ev.Key() == tcell.KeyRune {
 			if ev.Modifiers()&tcell.ModAlt != 0 {
 				switch ev.Rune() {
+				case 'q':
+					m.app.WillQuit = true
+					return
+
+				case 'h':
+					m.SetTool(&HelpTool{})
+					return
+
 				case 'p':
 					m.SetTool(MakePromptTool(m.Export, "export path..."))
 					return
@@ -295,7 +299,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 					m.SetTool(&TranslateTool{})
 					return
 
-				case 'q':
+				case 'e':
 					m.SetTool(&LineTool{})
 					return
 
