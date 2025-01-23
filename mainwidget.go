@@ -599,6 +599,7 @@ func (m *MainWidget) Export(s string) {
 }
 
 func (m *MainWidget) Import(s string) {
+	m.Stage()
 	var msg string
 	defer func() {
 		m.ClearTool()
@@ -608,13 +609,17 @@ func (m *MainWidget) Import(s string) {
 
 	f, err := os.Open(s)
 	if err != nil {
+		m.Rollback()
 		msg = err.Error()
 		return
 	}
-	if err := m.canvas.Import(f); err != nil {
+	if err := m.stagingCanvas.Import(f); err != nil {
+		m.Rollback()
 		msg = err.Error()
 		return
 	}
+
+	m.Commit()
 
 	msg = fmt.Sprintf("Successfully imported plaintext file %s", s)
 }
@@ -641,6 +646,7 @@ func (m *MainWidget) Save(s string) {
 }
 
 func (m *MainWidget) Load(s string) {
+	m.Stage()
 	var msg string
 	defer func() {
 		m.ClearTool()
@@ -651,12 +657,16 @@ func (m *MainWidget) Load(s string) {
 	f, err := os.Open(s)
 	if err != nil {
 		msg = err.Error()
+		m.Rollback()
 		return
 	}
-	if err := m.canvas.Load(f); err != nil {
+	if err := m.stagingCanvas.Load(f); err != nil {
 		msg = err.Error()
+		m.Rollback()
 		return
 	}
+
+	m.Commit()
 
 	msg = fmt.Sprintf("Successfully loaded %s", s)
 }
@@ -718,8 +728,8 @@ func (m *MainWidget) Commit() {
 	}
 
 	if m.undoHistoryPos > 0 {
+		m.bufferHistory = m.bufferHistory[:len(m.bufferHistory)-(m.undoHistoryPos-1)]
 		m.undoHistoryPos = 0
-		m.bufferHistory = m.bufferHistory[:len(m.bufferHistory)-m.undoHistoryPos-1]
 	} else {
 		m.bufferHistory = append(m.bufferHistory, m.canvas)
 	}

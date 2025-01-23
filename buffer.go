@@ -1,8 +1,6 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -156,25 +154,19 @@ func (b *Buffer) SetString(x int, y int, s []byte, st tcell.Style) {
 }
 
 func (b *Buffer) Import(r io.Reader) error {
-	var lines [][]byte
-	sc := bufio.NewScanner(r)
-	for sc.Scan() {
-		lines = append(lines, bytes.Clone(sc.Bytes()))
-		if err := sc.Err(); err != nil {
-			return err
-		}
+	data, err := GridFromReader(r)
+	if err != nil {
+		return err
 	}
 
-	if len(lines) == 0 || len(lines[0]) == 0 {
-		return errors.New("Empty data")
-	}
-
-	b.Data = MakeGrid(len(lines[0]), len(lines), Cell{})
+	b.Data = MakeGrid(data.Width, data.Height, Cell{})
+	b.SelectionMask = MakeGrid(data.Width, data.Height, false)
+	b.activeSelection = false
 
 	for y := range b.Data.Height {
 		for x := range b.Data.Width {
 			c, _ := b.Data.GetRef(x, y)
-			c.Value = lines[y][x]
+			c.Value = data.MustGet(x, y)
 		}
 	}
 
@@ -222,6 +214,9 @@ func (b *Buffer) Load(r io.Reader) error {
 	}
 
 	b.Data = MakeGrid(int(width), int(height), Cell{})
+	b.SelectionMask = MakeGrid(int(width), int(height), false)
+	b.activeSelection = false
+
 	for y := range int(height) {
 		for x := range int(width) {
 			var u uint16

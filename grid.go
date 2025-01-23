@@ -1,6 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"bufio"
+	"fmt"
+	"io"
+	"unicode"
+)
 
 type Grid[T any] struct {
 	data   []T
@@ -80,6 +85,44 @@ func GridFromStrings(strings ...string) Grid[rune] {
 	}
 
 	return GridFromSlices(slices...)
+}
+
+// Ignores non-Unicode characters.
+func GridFromReader(r io.Reader) (Grid[byte], error) {
+	var lines [][]byte
+	var maxWidth = 0
+	sc := bufio.NewScanner(r)
+	for sc.Scan() {
+		var l []byte
+		for _, r := range sc.Text() {
+			if r > unicode.MaxASCII {
+				l = append(l, '?')
+			} else if r == '\t' {
+				l = append(l, ' ', ' ', ' ', ' ')
+			} else if unicode.IsSpace(r) {
+				l = append(l, ' ')
+			} else if r < 0x20 {
+				l = append(l, '?')
+			} else {
+				l = append(l, byte(r))
+			}
+		}
+		maxWidth = max(maxWidth, len(l))
+		lines = append(lines, l)
+	}
+
+	if sc.Err() != nil {
+		return Grid[byte]{}, sc.Err()
+	}
+
+	res := MakeGrid(maxWidth, len(lines), byte(' '))
+	for y, ln := range lines {
+		for x, c := range ln {
+			res.Set(x, y, c)
+		}
+	}
+
+	return res, nil
 }
 
 func (g *Grid[T]) InBounds(x, y int) bool {
