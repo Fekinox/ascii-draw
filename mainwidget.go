@@ -320,18 +320,22 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 					m.SetTool(&StampTool{})
 					return
 
+				// Increase brush radius
 				case '=':
 					m.brushRadius = min(MAX_BRUSH_RADIUS, m.brushRadius+1)
 					return
 
+				// Decrease brush radius
 				case '-':
 					m.brushRadius = max(1, m.brushRadius-1)
 					return
 
+				// Undo
 				case 'z':
 					m.undoHistoryPos = min(len(m.bufferHistory), m.undoHistoryPos+1)
 					return
 
+				// Redo
 				case 'Z':
 					m.undoHistoryPos = max(0, m.undoHistoryPos-1)
 					return
@@ -357,7 +361,22 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				case '4':
 					m.lockMask ^= LockMaskBg
 					return
+
+				case ',':
+					m.Stage()
+					m.stagingCanvas.ClearSelection()
+					m.Commit()
+					return
+				case '.':
+					m.Stage()
+					m.stagingCanvas.FillSelection(Cell{
+						Value: m.brushCharacter,
+						Style: tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
+					})
+					m.Commit()
+					return
 				}
+
 			}
 
 			if m.colorSelectState == ColorSelectFg {
