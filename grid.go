@@ -78,15 +78,6 @@ func GridFromSlices[T any](slices ...[]T) Grid[T] {
 	}
 }
 
-func GridFromStrings(strings ...string) Grid[rune] {
-	slices := make([][]rune, len(strings))
-	for i := 0; i < len(strings); i++ {
-		slices[i] = []rune(strings[i])
-	}
-
-	return GridFromSlices(slices...)
-}
-
 // Ignores non-Unicode characters.
 func GridFromReader(r io.Reader) (Grid[byte], error) {
 	var lines [][]byte
@@ -185,12 +176,5 @@ func (g *Grid[T]) Resize(ox, oy int, neww, newh int, def T) Grid[T] {
 func (g *Grid[T]) ShallowClone() Grid[T] {
 	return MakeGridWith(g.Width, g.Height, func(x, y int) T {
 		return g.MustGet(x, y)
-	})
-}
-
-func ShiftedDifference(g Grid[bool], dx, dy int) Grid[bool] {
-	return MakeGridWith(g.Width, g.Height, func(x, y int) bool {
-		valAtOldPos, outOfBoundsAtOldPos := g.Get(x-dx, y-dy)
-		return g.MustGet(x, y) && (!valAtOldPos || outOfBoundsAtOldPos)
 	})
 }
