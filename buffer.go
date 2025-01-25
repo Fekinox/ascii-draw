@@ -105,6 +105,7 @@ func (b *Buffer) Set(x int, y int, v byte, s tcell.Style) {
 	// SetContent already does this, but I wanna be extra safe
 	if v <= 0x20 || v >= 0x7f {
 		v = ' '
+		s = s.Foreground(tcell.ColorDefault)
 	}
 	b.Data.Set(x, y, Cell{
 		Value: v,
@@ -139,6 +140,10 @@ func (b *Buffer) SetCell(x int, y int, cell Cell, mask LockMask) {
 
 	if mask&LockMaskBg == 0 {
 		targetCell.Style = targetCell.Style.Background(bg)
+	}
+
+	if targetCell.Value == ' ' {
+		targetCell.Style = targetCell.Style.Foreground(tcell.ColorDefault)
 	}
 
 	b.Data.Set(x, y, targetCell)
