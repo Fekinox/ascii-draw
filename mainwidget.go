@@ -401,7 +401,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				return
 			}
 
-			if !m.hasTool {
+			if !m.hasTool && ev.Rune() < unicode.MaxASCII {
 				m.brushCharacter = byte(ev.Rune())
 			}
 		}
