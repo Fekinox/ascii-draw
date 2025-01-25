@@ -24,10 +24,35 @@ An ASCII art program written in Go, powered by the [tcell](https://github.com/gd
 * Instead of replacing selection, allow user to add, subtract, or intersect with the current selection
 * Layer system
 * Giving an actual name to this project
+* Persistent configuration
 
 ## Controls
 
-q
+|-----------------|--------------------------------------------------------------------------------------------------------------------|
+| Any key         | Set the current brush character                                                                                    |
+| Esc             | Return to brush tool                                                                                               |
+| Alt+h           | Show help page                                                                                                     |
+| Alt+q           | Quit                                                                                                               |
+| Alt+f           | Select foreground color                                                                                            |
+| Alt+g           | Select background color                                                                                            |
+| Alt+=           | Increase brush radius                                                                                              |
+| Alt+-           | Decrease brush radius                                                                                              |
+| Alt+mouse hover | Look up character and colors on canvas                                                                             |
+| Alt+click       | Grab character from canvas                                                                                         |
+| Alt+drag up     | Grab foreground color                                                                                              |
+| Alt+drag down   | Grab background color                                                                                              |
+| Alt+z           | Undo                                                                                                               |
+| Alt+Z           | Redo                                                                                                               |
+| Alt+1           | Toggle alpha lock: drawing commands do not modify empty characters (space ` ` characters with no background color) |
+| Alt+2           | Toggle character lock: drawing commands do not change the character of a cell.                                     |
+| Alt+3           | Toggle foreground lock: drawing commands do not change the foreground color of a cell.                             |
+| Alt+4           | Toggle background lock: drawing commands do not change the background color of a cell.                             |
+
+|---|---|
+|Alt+s|Save to binary file|
+|Alt+l|Load from binary file|
+|Alt+i|Import plain text|
+|Alt+p|Export plain text|
 
 ## Limitations
 
