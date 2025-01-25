@@ -24,10 +24,6 @@ func (e *PromptTool) Name() string {
 	return "Export"
 }
 
-func (e *PromptTool) HandleAction(m *MainWidget, action Action) {
-	e.Text.HandleAction(action)
-}
-
 func (e *PromptTool) HandleEvent(m *MainWidget, event tcell.Event) {
 	e.Text.HandleEvent(event)
 }

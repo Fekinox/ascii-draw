@@ -15,12 +15,6 @@ func NewMultiWidget(widgets ...Widget) *MultiWidget {
 	return &MultiWidget{widgets: ws}
 }
 
-func (m *MultiWidget) HandleAction(action Action) {
-	for _, w := range m.widgets {
-		w.HandleAction(action)
-	}
-}
-
 func (m *MultiWidget) HandleEvent(event tcell.Event) {
 	for _, w := range m.widgets {
 		w.HandleEvent(event)

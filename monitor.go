@@ -8,15 +8,8 @@ import (
 )
 
 type Monitor struct {
-	lastAction    Action
-	hasLastAction bool
-	lastEvent     tcell.Event
-	hasLastEvent  bool
-}
-
-func (m *Monitor) HandleAction(action Action) {
-	m.lastAction = action
-	m.hasLastAction = true
+	lastEvent    tcell.Event
+	hasLastEvent bool
 }
 
 func (m *Monitor) HandleEvent(event tcell.Event) {

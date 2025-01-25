@@ -20,9 +20,6 @@ type App struct {
 
 	WillQuit bool
 
-	keyActionMap  map[tcell.Key]Action
-	runeActionMap map[rune]Action
-
 	LogFileHandle *os.File
 	Logger        *log.Logger
 }
@@ -49,8 +46,6 @@ func NewApp() *App {
 	app := &App{
 		DefaultStyle: tcell.StyleDefault.Background(tcell.ColorReset).
 			Foreground(tcell.ColorReset),
-		keyActionMap:  make(map[tcell.Key]Action),
-		runeActionMap: make(map[rune]Action),
 	}
 
 	// Initialize logger
@@ -102,21 +97,7 @@ func (a *App) Loop() {
 				if ev.Key() == tcell.KeyCtrlL {
 					Screen.Sync()
 				} else {
-					var action Action
-					var ok bool
-					if ev.Key() == tcell.KeyRune {
-						action, ok = a.runeActionMap[ev.Rune()]
-					} else {
-						action, ok = a.keyActionMap[ev.Key()]
-					}
-
-					// action, ok
-					var _, _ = action, ok
-					if ok {
-						a.widget.HandleAction(action)
-					} else {
-						a.widget.HandleEvent(ev)
-					}
+					a.widget.HandleEvent(ev)
 				}
 			default:
 				a.widget.HandleEvent(ev)

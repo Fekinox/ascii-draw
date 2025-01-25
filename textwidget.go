@@ -19,12 +19,6 @@ var (
 	_ Widget = &TextWidget{}
 )
 
-func (t *TextWidget) HandleAction(action Action) {
-	if !t.Active {
-		return
-	}
-}
-
 func (t *TextWidget) HandleEvent(event tcell.Event) {
 	if !t.Active {
 		return

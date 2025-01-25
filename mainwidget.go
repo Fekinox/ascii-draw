@@ -118,19 +118,6 @@ func Init(a *App, screen tcell.Screen) *MainWidget {
 	return w
 }
 
-func (m *MainWidget) HandleAction(action Action) {
-	switch action {
-	case MoveUp:
-		m.cursorY--
-	case MoveDown:
-		m.cursorY++
-	case MoveLeft:
-		m.cursorX--
-	case MoveRight:
-		m.cursorX++
-	}
-}
-
 func (m *MainWidget) HandleEvent(event tcell.Event) {
 	if m.isPasting {
 		m.HandlePaste(event)
