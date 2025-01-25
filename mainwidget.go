@@ -315,30 +315,25 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 
 		if ev.Key() == tcell.KeyRune {
 			if ev.Modifiers()&tcell.ModAlt != 0 {
+				handled := true
 				switch ev.Rune() {
 				case 'q':
 					m.app.WillQuit = true
-					return true
 
 				case 'h':
 					m.SetTool(&HelpTool{})
-					return true
 
 				case 'p':
 					m.SetTool(MakePromptTool(m.Export, "export path..."))
-					return true
 
 				case 'i':
 					m.SetTool(MakePromptTool(m.Import, "import path..."))
-					return true
 
 				case 's':
 					m.SetTool(MakePromptTool(m.Save, "save path..."))
-					return true
 
 				case 'l':
 					m.SetTool(MakePromptTool(m.Load, "load path..."))
-					return true
 
 				case 'f':
 					if m.colorSelectState != ColorSelectFg {
@@ -346,7 +341,6 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 					} else {
 						m.colorSelectState = ColorSelectNone
 					}
-					return true
 
 				case 'g':
 					if m.colorSelectState != ColorSelectBg {
@@ -354,94 +348,76 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 					} else {
 						m.colorSelectState = ColorSelectNone
 					}
-					return true
 
 				case 'n':
 					m.Stage()
 					m.stagingCanvas = MakeBuffer(m.canvas.Data.Width, m.canvas.Data.Height)
 					m.Commit()
-					return true
 
 				case 'r':
 					m.SetTool(&LassoTool{})
-					return true
 
 				case 't':
 					m.SetTool(&TranslateTool{})
-					return true
 
 				case 'e':
 					m.SetTool(&LineTool{})
-					return true
 
 				case 'a':
 					m.Stage()
 					m.stagingCanvas.Deselect()
 					m.Commit()
-					return true
 
 				case 'c':
 					m.SetClipboard()
-					return true
 
 				case 'x':
 					m.SetClipboard()
 					m.Stage()
 					m.stagingCanvas.ClearSelection()
 					m.Commit()
-					return true
 
 				case 'v':
 					m.SetTool(&StampTool{})
-					return true
 
 				// Increase brush radius
 				case '=':
 					m.brushRadius = min(MAX_BRUSH_RADIUS, m.brushRadius+1)
-					return true
 
 				// Decrease brush radius
 				case '-':
 					m.brushRadius = max(1, m.brushRadius-1)
-					return true
 
 				// Undo
 				case 'z':
 					m.undoHistoryPos = min(len(m.bufferHistory), m.undoHistoryPos+1)
-					return true
 
 				// Redo
 				case 'Z':
 					m.undoHistoryPos = max(0, m.undoHistoryPos-1)
-					return true
 
 				case '[':
 					t := &ResizeTool{}
 					t.SetDimsFromSelection(m.CurrentCanvas())
 					m.SetTool(t)
-					return true
 
 				case '1':
 					m.lockMask ^= LockMaskAlpha
-					return true
 
 				case '2':
 					m.lockMask ^= LockMaskChar
-					return true
 
 				case '3':
 					m.lockMask ^= LockMaskFg
-					return true
 
 				case '4':
 					m.lockMask ^= LockMaskBg
-					return true
 
 				case ',':
 					m.Stage()
 					m.stagingCanvas.ClearSelection()
 					m.Commit()
-					return true
+
 				case '.':
 					m.Stage()
 					m.stagingCanvas.FillSelection(Cell{
@@ -449,9 +425,11 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 						Style: tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
 					})
 					m.Commit()
-					return true
-				}
 
+				default:
+					handled = false
+				}
+				return handled
 			}
 		}
 	}
