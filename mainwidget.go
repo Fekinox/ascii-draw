@@ -133,58 +133,112 @@ func (m *MainWidget) HandleAction(action Action) {
 
 func (m *MainWidget) HandleEvent(event tcell.Event) {
 	if m.isPasting {
-		switch ev := event.(type) {
-		case *tcell.EventPaste:
-			if ev.End() {
-				// set clipboard and return to stamp tool
-				m.SetClipboardFromPasteData()
-				m.SetTool(&StampTool{})
-				m.isPasting = false
-			}
-		case *tcell.EventKey:
-			switch ev.Key() {
-			case tcell.KeyRune:
-				r := ev.Rune()
-				if r > unicode.MaxASCII {
-					r = '?'
-				}
-				m.pasteData = append(m.pasteData, byte(r))
-			default:
-				m.pasteData = append(m.pasteData, '\n')
-			}
-		}
+		m.HandlePaste(event)
 		return
 	}
+
 	switch ev := event.(type) {
 	case *tcell.EventPaste:
-		m.isPasting = true
-		m.pasteData = []byte{}
+		m.StartPaste()
+		return
 	case *tcell.EventResize:
 		oldsw, oldsh := m.sw, m.sh
 		m.ScreenResize(ev.Size())
 		m.ScaleOffset(oldsw, oldsh, m.sw, m.sh)
+		return
 	case *tcell.EventMouse:
 		cx, cy := ev.Position()
 		cx, cy = cx-m.sx, cy-m.sy
 		m.cursorX, m.cursorY = cx, cy
+	}
 
+	if handled := m.HandlePan(event); handled {
+		return
+	}
+
+	if m.isPan {
+		return
+	}
+
+	if handled := m.HandleColorPick(event); handled {
+		return
+	}
+
+	if handled := m.HandleColorSelect(event); handled {
+		return
+	}
+
+	if handled := m.HandleShortcuts(event); handled {
+		return
+	}
+
+	switch ev := event.(type) {
+	case *tcell.EventKey:
+		if ev.Key() == tcell.KeyRune {
+			if r := ev.Rune(); r < unicode.MaxASCII && r >= 0x20 {
+				m.brushCharacter = byte(r)
+			}
+		}
+	}
+
+	m.currentTool.HandleEvent(m, event)
+}
+
+func (m *MainWidget) StartPaste() {
+	m.isPasting = true
+	m.pasteData = []byte{}
+}
+
+func (m *MainWidget) HandlePaste(event tcell.Event) {
+	switch ev := event.(type) {
+	case *tcell.EventPaste:
+		if ev.End() {
+			// set clipboard and return to stamp tool
+			m.SetClipboardFromPasteData()
+			m.SetTool(&StampTool{})
+			m.isPasting = false
+		}
+	case *tcell.EventKey:
+		switch ev.Key() {
+		case tcell.KeyRune:
+			r := ev.Rune()
+			if r > unicode.MaxASCII {
+				r = '?'
+			}
+			m.pasteData = append(m.pasteData, byte(r))
+		default:
+			m.pasteData = append(m.pasteData, '\n')
+		}
+	}
+}
+
+func (m *MainWidget) HandlePan(event tcell.Event) bool {
+	switch ev := event.(type) {
+	case *tcell.EventMouse:
 		if ev.Modifiers()&tcell.ModCtrl != 0 &&
 			ev.Buttons()&tcell.Button1 != 0 {
 			if !m.isPan {
 				m.isPan = true
-				m.panOriginX, m.panOriginY = cx, cy
+				m.panOriginX, m.panOriginY = m.cursorX, m.cursorY
 			}
-			return
+			return true
 		} else if m.isPan {
 			m.isPan = false
 			m.offsetX += m.cursorX - m.panOriginX
 			m.offsetY += m.cursorY - m.panOriginY
+			return true
 		}
+	}
+	return false
+}
 
+func (m *MainWidget) HandleColorPick(event tcell.Event) bool {
+	switch ev := event.(type) {
+	case *tcell.EventMouse:
 		if ev.Modifiers()&tcell.ModAlt != 0 {
 			if m.colorPickState != ColorPickDrag {
 				m.colorPickState = ColorPickHover
-				canvasX, canvasY := cx-m.offsetX, cy-m.offsetY
+				canvasX, canvasY := m.cursorX-m.offsetX, m.cursorY-m.offsetY
 
 				if m.canvas.Data.InBounds(canvasX, canvasY) {
 					cell := m.canvas.Data.MustGet(canvasX, canvasY)
@@ -196,8 +250,9 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 					m.colorPickState = ColorPickDrag
 					m.colorPickOriginX = m.cursorX
 					m.colorPickOriginY = m.cursorY
+					return true
 				}
-			} else {
+			} else if m.colorPickState == ColorPickDrag {
 				if ev.Buttons()&tcell.Button1 == 0 {
 					offsetY := m.cursorY - m.colorPickOriginY
 					if offsetY < -2 {
@@ -209,8 +264,9 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 					}
 					m.colorPickState = ColorPickHover
 				}
+				return true
 			}
-			return
+			return false
 		} else {
 			if m.colorPickState == ColorPickDrag {
 				offsetY := m.cursorX - m.colorPickOriginY
@@ -221,9 +277,37 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				} else {
 					m.brushCharacter = m.hoverChar
 				}
+				m.colorPickState = ColorPickNone
+				return true
 			}
 			m.colorPickState = ColorPickNone
+			return false
 		}
+	}
+	return false
+}
+
+func (m *MainWidget) HandleColorSelect(event tcell.Event) bool {
+	switch ev := event.(type) {
+	case *tcell.EventKey:
+		if m.colorSelectState != ColorSelectNone {
+			r := ev.Rune()
+			if newColor, ok := colorMap[r]; ok {
+				if m.colorSelectState == ColorSelectFg {
+					m.SetFgColor(newColor)
+				} else if m.colorSelectState == ColorSelectBg {
+					m.SetBgColor(newColor)
+				}
+			}
+			m.colorSelectState = ColorSelectNone
+			return true
+		}
+	}
+	return false
+}
+
+func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
+	switch ev := event.(type) {
 	case *tcell.EventKey:
 		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Key() == tcell.KeyF1 {
 			if m.isPan {
@@ -233,13 +317,13 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				m.panOriginY = m.cursorY
 			}
 			m.CenterCanvas()
-			return
+			return true
 		}
 
 		// FIXME: hack
 		if ev.Key() == tcell.KeyEscape {
 			m.ClearTool()
-			return
+			return true
 		}
 
 		if ev.Key() == tcell.KeyRune {
@@ -247,27 +331,27 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 				switch ev.Rune() {
 				case 'q':
 					m.app.WillQuit = true
-					return
+					return true
 
 				case 'h':
 					m.SetTool(&HelpTool{})
-					return
+					return true
 
 				case 'p':
 					m.SetTool(MakePromptTool(m.Export, "export path..."))
-					return
+					return true
 
 				case 'i':
 					m.SetTool(MakePromptTool(m.Import, "import path..."))
-					return
+					return true
 
 				case 's':
 					m.SetTool(MakePromptTool(m.Save, "save path..."))
-					return
+					return true
 
 				case 'l':
 					m.SetTool(MakePromptTool(m.Load, "load path..."))
-					return
+					return true
 
 				case 'f':
 					if m.colorSelectState != ColorSelectFg {
@@ -275,7 +359,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 					} else {
 						m.colorSelectState = ColorSelectNone
 					}
-					return
+					return true
 
 				case 'g':
 					if m.colorSelectState != ColorSelectBg {
@@ -283,94 +367,94 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 					} else {
 						m.colorSelectState = ColorSelectNone
 					}
-					return
+					return true
 
 				case 'n':
 					m.Stage()
 					m.stagingCanvas = MakeBuffer(m.canvas.Data.Width, m.canvas.Data.Height)
 					m.Commit()
-					return
+					return true
 
 				case 'r':
 					m.SetTool(&LassoTool{})
-					return
+					return true
 
 				case 't':
 					m.SetTool(&TranslateTool{})
-					return
+					return true
 
 				case 'e':
 					m.SetTool(&LineTool{})
-					return
+					return true
 
 				case 'a':
 					m.Stage()
 					m.stagingCanvas.Deselect()
 					m.Commit()
-					return
+					return true
 
 				case 'c':
 					m.SetClipboard()
-					return
+					return true
 
 				case 'x':
 					m.SetClipboard()
 					m.Stage()
 					m.stagingCanvas.ClearSelection()
 					m.Commit()
-					return
+					return true
 
 				case 'v':
 					m.SetTool(&StampTool{})
-					return
+					return true
 
 				// Increase brush radius
 				case '=':
 					m.brushRadius = min(MAX_BRUSH_RADIUS, m.brushRadius+1)
-					return
+					return true
 
 				// Decrease brush radius
 				case '-':
 					m.brushRadius = max(1, m.brushRadius-1)
-					return
+					return true
 
 				// Undo
 				case 'z':
 					m.undoHistoryPos = min(len(m.bufferHistory), m.undoHistoryPos+1)
-					return
+					return true
 
 				// Redo
 				case 'Z':
 					m.undoHistoryPos = max(0, m.undoHistoryPos-1)
-					return
+					return true
 
 				case '[':
 					t := &ResizeTool{}
 					t.SetDimsFromSelection(m.CurrentCanvas())
 					m.SetTool(t)
-					return
+					return true
 
 				case '1':
 					m.lockMask ^= LockMaskAlpha
-					return
+					return true
 
 				case '2':
 					m.lockMask ^= LockMaskChar
-					return
+					return true
 
 				case '3':
 					m.lockMask ^= LockMaskFg
-					return
+					return true
 
 				case '4':
 					m.lockMask ^= LockMaskBg
-					return
+					return true
 
 				case ',':
 					m.Stage()
 					m.stagingCanvas.ClearSelection()
 					m.Commit()
-					return
+					return true
 				case '.':
 					m.Stage()
 					m.stagingCanvas.FillSelection(Cell{
@@ -378,38 +462,13 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 						Style: tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
 					})
 					m.Commit()
-					return
+					return true
 				}
 
-			}
-
-			if m.colorSelectState == ColorSelectFg {
-				m.colorSelectState = ColorSelectNone
-				r := ev.Rune()
-				if newColor, ok := colorMap[r]; ok {
-					m.SetFgColor(newColor)
-				}
-				return
-			}
-
-			if m.colorSelectState == ColorSelectBg {
-				m.colorSelectState = ColorSelectNone
-				r := ev.Rune()
-				if newColor, ok := colorMap[r]; ok {
-					m.SetBgColor(newColor)
-				}
-				return
-			}
-
-			if !m.hasTool && ev.Rune() < unicode.MaxASCII {
-				m.brushCharacter = byte(ev.Rune())
 			}
 		}
 	}
-
-	if !m.isPan && m.hasTool {
-		m.currentTool.HandleEvent(m, event)
-	}
+	return false
 }
 
 func (m *MainWidget) Update() {
