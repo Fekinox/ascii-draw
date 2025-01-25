@@ -48,14 +48,4 @@ func (l *LassoTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) 
 			j = i
 		}
 	}
-	// for y := range l.mask.Height {
-	// 	for x := range l.mask.Width {
-	// 		if !l.mask.MustGet(x, y) {
-	// 			continue
-	// 		}
-	// 		xx, yy := x+l.topLeft.X, y+l.topLeft.Y
-	// 		_, s := p.GetContent(xx, yy)
-	// 		p.SetStyle(xx, yy, s.Reverse(true))
-	// 	}
-	// }
 }
