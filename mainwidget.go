@@ -462,6 +462,7 @@ func (m *MainWidget) Update() {
 }
 
 func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
+	// Draw surrounding box of screen
 	r := Area{
 		X:      x + 1,
 		Y:      y + 1,
@@ -476,65 +477,30 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 		Height: r.Height + 2,
 	}, tcell.StyleDefault)
 
+	// Crop to edges of screen
 	crop := &CropPainter{
 		p:            p,
 		offsetBefore: Position{X: r.X, Y: r.Y},
 		area:         r,
 	}
 
+	// Canvas offset for future drawing operations
 	canvasOffX, canvasOffY := m.offsetX, m.offsetY
 	if m.isPan {
 		canvasOffX += m.cursorX - m.panOriginX
 		canvasOffY += m.cursorY - m.panOriginY
 	}
 
-	// canvas rendering
-	curCanvas := m.canvas
-	if m.isStaging {
-		curCanvas = m.stagingCanvas
-	} else if m.undoHistoryPos > 0 {
-		curCanvas = m.bufferHistory[len(m.bufferHistory)-m.undoHistoryPos]
-	}
-	curCanvas.RenderWith(crop, canvasOffX, canvasOffY, true)
+	m.DrawCanvas(crop, canvasOffX, canvasOffY)
 
-	BorderBox(crop, Area{
-		X:      canvasOffX - 1,
-		Y:      canvasOffY - 1,
-		Width:  m.canvas.Data.Width + 2,
-		Height: m.canvas.Data.Height + 2,
-	}, tcell.StyleDefault)
-
+	// If a tool is active, draw the given tool
 	if m.hasTool {
 		m.currentTool.Draw(m, p, x, y, w, h, lag)
 	} else {
 		SetString(p, x+1, y, "No Tool", tcell.StyleDefault)
 	}
 
-	SetCenteredString(p, x+w/2, y, m.statusLine, tcell.StyleDefault)
-
-	// color/char indicators
-	SetString(p, x+w-27, y, fmt.Sprintf("radius: %d", m.brushRadius), tcell.StyleDefault)
-	SetString(p, x+w-17, y, "char: ", tcell.StyleDefault)
-	p.SetByte(x+w-12, y, m.brushCharacter, tcell.StyleDefault)
-	SetString(p, x+w-10, y, "fg: ", tcell.StyleDefault)
-	DrawColorSymbolFG(p, x+w-7, y, m.fgColor)
-	SetString(p, x+w-5, y, "bg: ", tcell.StyleDefault)
-	DrawColorSymbolBG(p, x+w-2, y, m.bgColor)
-
-	// Lock mask
-	SetString(p, x+w-38, y, fmt.Sprintf("lock: ____"), tcell.StyleDefault)
-	if m.lockMask&LockMaskAlpha != 0 {
-		p.SetByte(x+w-32, y, 'a', tcell.StyleDefault)
-	}
-	if m.lockMask&LockMaskChar != 0 {
-		p.SetByte(x+w-31, y, 'c', tcell.StyleDefault)
-	}
-	if m.lockMask&LockMaskFg != 0 {
-		p.SetByte(x+w-30, y, 'f', tcell.StyleDefault)
-	}
-	if m.lockMask&LockMaskBg != 0 {
-		p.SetByte(x+w-29, y, 'g', tcell.StyleDefault)
-	}
+	m.DrawStatusBar(p, x, y, w, h)
 
 	// color picker
 	if m.colorPickState == ColorPickHover {
@@ -565,17 +531,62 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	if m.colorSelectState != ColorSelectNone {
 		DrawColorSelector(p, x, y+1, m.colorSelectState)
 	}
+}
+
+func (m *MainWidget) DrawStatusBar(p Painter, x, y, w, h int) {
+	// Draw the statusline
+	SetCenteredString(p, x+w/2, y, m.statusLine, tcell.StyleDefault)
+
+	// color/char indicators
+	SetString(p, x+w-27, y, fmt.Sprintf("radius: %d", m.brushRadius), tcell.StyleDefault)
+	SetString(p, x+w-17, y, "char: ", tcell.StyleDefault)
+	p.SetByte(x+w-12, y, m.brushCharacter, tcell.StyleDefault)
+	SetString(p, x+w-10, y, "fg: ", tcell.StyleDefault)
+	DrawColorSymbolFG(p, x+w-7, y, m.fgColor)
+	SetString(p, x+w-5, y, "bg: ", tcell.StyleDefault)
+	DrawColorSymbolBG(p, x+w-2, y, m.bgColor)
+
+	// Lock mask
+	SetString(p, x+w-38, y, fmt.Sprintf("lock: ____"), tcell.StyleDefault)
+	if m.lockMask&LockMaskAlpha != 0 {
+		p.SetByte(x+w-32, y, 'a', tcell.StyleDefault)
+	}
+	if m.lockMask&LockMaskChar != 0 {
+		p.SetByte(x+w-31, y, 'c', tcell.StyleDefault)
+	}
+	if m.lockMask&LockMaskFg != 0 {
+		p.SetByte(x+w-30, y, 'f', tcell.StyleDefault)
+	}
+	if m.lockMask&LockMaskBg != 0 {
+		p.SetByte(x+w-29, y, 'g', tcell.StyleDefault)
+	}
+}
+
+func (m *MainWidget) DrawCanvas(p Painter, offX, offY int) {
+	// Rendering the canvas
+	curCanvas := m.canvas
+	if m.isStaging {
+		curCanvas = m.stagingCanvas
+	} else if m.undoHistoryPos > 0 {
+		curCanvas = m.bufferHistory[len(m.bufferHistory)-m.undoHistoryPos]
+	}
+	curCanvas.RenderWith(p, offX, offY, true)
+
+	BorderBox(p, Area{
+		X:      offX - 1,
+		Y:      offY - 1,
+		Width:  m.canvas.Data.Width + 2,
+		Height: m.canvas.Data.Height + 2,
+	}, tcell.StyleDefault)
 
 	// selection mask
 	if curCanvas.activeSelection {
-		ox, oy := canvasOffX, canvasOffY
-
 		for y := range curCanvas.Data.Height {
 			for x := range curCanvas.Data.Width {
 				if curCanvas.SelectionMask.MustGet(x, y) {
-					xx, yy := x+ox, y+oy
-					_, s := crop.GetContent(xx, yy)
-					crop.SetStyle(xx, yy, s.Reverse(true))
+					xx, yy := x+offX, y+offY
+					_, s := p.GetContent(xx, yy)
+					p.SetStyle(xx, yy, s.Reverse(true))
 				}
 			}
 		}
