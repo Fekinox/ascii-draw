@@ -151,8 +151,10 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 		return
 	}
 
-	if handled := m.HandleColorSelect(event); handled {
-		return
+	if m.colorSelectState != ColorSelectNone {
+		if handled := m.HandleColorSelect(event); handled {
+			return
+		}
 	}
 
 	if handled := m.HandleShortcuts(event); handled {
@@ -277,18 +279,16 @@ func (m *MainWidget) HandleColorPick(event tcell.Event) bool {
 func (m *MainWidget) HandleColorSelect(event tcell.Event) bool {
 	switch ev := event.(type) {
 	case *tcell.EventKey:
-		if m.colorSelectState != ColorSelectNone {
-			r := ev.Rune()
-			if newColor, ok := colorMap[r]; ok {
-				if m.colorSelectState == ColorSelectFg {
-					m.SetFgColor(newColor)
-				} else if m.colorSelectState == ColorSelectBg {
-					m.SetBgColor(newColor)
-				}
+		r := ev.Rune()
+		if newColor, ok := colorMap[r]; ok {
+			if m.colorSelectState == ColorSelectFg {
+				m.SetFgColor(newColor)
+			} else if m.colorSelectState == ColorSelectBg {
+				m.SetBgColor(newColor)
 			}
-			m.colorSelectState = ColorSelectNone
-			return true
 		}
+		m.colorSelectState = ColorSelectNone
+		return true
 	}
 	return false
 }
