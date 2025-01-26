@@ -175,7 +175,8 @@ func (m *MainWidget) StartPaste() {
 }
 
 func (m *MainWidget) HandlePaste(event tcell.Event) bool {
-	// FIXME: hack to deal with pasting into prompt tool
+	// FIXME: hack to deal with pasting into prompt tool. maybe in future allow event handlers
+	// to return booleans?
 	if m.currentTool != nil {
 		if _, ok := m.currentTool.(*PromptTool); ok {
 			return true
