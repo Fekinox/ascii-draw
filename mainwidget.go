@@ -115,6 +115,8 @@ func Init(a *App, screen tcell.Screen) *MainWidget {
 	w.ScreenResize(screen.Size())
 	w.CenterCanvas()
 	w.ClearTool()
+
+	w.cursorX, w.cursorY = w.sw/2, w.sh/2
 	return w
 }
 
