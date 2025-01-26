@@ -9,6 +9,11 @@ import (
 
 var (
 	Screen tcell.Screen
+
+	Condition = &runewidth.Condition{
+		EastAsianWidth:     true,
+		StrictEmojiNeutral: true,
+	}
 )
 
 type Painter interface {
@@ -41,7 +46,7 @@ func (d DefaultPainter) SetRune(
 	combining []rune,
 	style tcell.Style,
 ) {
-	Screen.SetContent(x, y, rune(v), combining, style)
+	Screen.SetContent(x, y, v, combining, style)
 }
 
 func (d DefaultPainter) GetContent(x, y int) (rune, tcell.Style) {
@@ -98,7 +103,7 @@ type Span struct {
 func SetString(p Painter, x int, y int, s string, style tcell.Style) {
 	col := x
 	for _, ch := range s {
-		width := runewidth.RuneWidth(ch)
+		width := Condition.RuneWidth(ch)
 		p.SetRune(col, y, ch, nil, style)
 		col += width
 	}

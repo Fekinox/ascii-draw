@@ -121,10 +121,6 @@ func Init(a *App, screen tcell.Screen) *MainWidget {
 }
 
 func (m *MainWidget) HandleEvent(event tcell.Event) {
-	if handled := m.HandlePaste(event); handled {
-		return
-	}
-
 	switch ev := event.(type) {
 	case *tcell.EventResize:
 		oldsw, oldsh := m.sw, m.sh
@@ -167,6 +163,10 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 	}
 
 	m.currentTool.HandleEvent(m, event)
+
+	if handled := m.HandlePaste(event); handled {
+		return
+	}
 }
 
 func (m *MainWidget) StartPaste() {
@@ -175,6 +175,12 @@ func (m *MainWidget) StartPaste() {
 }
 
 func (m *MainWidget) HandlePaste(event tcell.Event) bool {
+	// FIXME: hack to deal with pasting into prompt tool
+	if m.currentTool != nil {
+		if _, ok := m.currentTool.(*PromptTool); ok {
+			return true
+		}
+	}
 	switch ev := event.(type) {
 	case *tcell.EventPaste:
 		if ev.Start() {
