@@ -44,6 +44,7 @@ func linePositionsHigh(ax, ay, bx, by int) (pos []Position) {
 	return
 }
 
+// Given two points, computes all of the pixel points between them using Bresenham's line algorithm.
 func LinePositions(ax, ay, bx, by int) []Position {
 	dx, dy := bx-ax, by-ay
 	if max(dy, -dy) < max(dx, -dx) {
