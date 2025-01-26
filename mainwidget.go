@@ -119,15 +119,11 @@ func Init(a *App, screen tcell.Screen) *MainWidget {
 }
 
 func (m *MainWidget) HandleEvent(event tcell.Event) {
-	if m.isPasting {
-		m.HandlePaste(event)
+	if handled := m.HandlePaste(event); handled {
 		return
 	}
 
 	switch ev := event.(type) {
-	case *tcell.EventPaste:
-		m.StartPaste()
-		return
 	case *tcell.EventResize:
 		oldsw, oldsh := m.sw, m.sh
 		m.ScreenResize(ev.Size())
@@ -143,18 +139,12 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 		return
 	}
 
-	if m.isPan {
-		return
-	}
-
 	if handled := m.HandleColorPick(event); handled {
 		return
 	}
 
-	if m.colorSelectState != ColorSelectNone {
-		if handled := m.HandleColorSelect(event); handled {
-			return
-		}
+	if handled := m.HandleColorSelect(event); handled {
+		return
 	}
 
 	if handled := m.HandleShortcuts(event); handled {
@@ -164,9 +154,13 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 	switch ev := event.(type) {
 	case *tcell.EventKey:
 		if ev.Key() == tcell.KeyRune {
-			if r := ev.Rune(); r < unicode.MaxASCII && r >= 0x20 {
-				m.brushCharacter = byte(r)
+			r := ev.Rune()
+			if r > unicode.MaxASCII {
+				r = '?'
+			} else if r <= 0x20 {
+				r = ' '
 			}
+			m.brushCharacter = byte(r)
 		}
 	}
 
@@ -178,16 +172,22 @@ func (m *MainWidget) StartPaste() {
 	m.pasteData = []byte{}
 }
 
-func (m *MainWidget) HandlePaste(event tcell.Event) {
+func (m *MainWidget) HandlePaste(event tcell.Event) bool {
 	switch ev := event.(type) {
 	case *tcell.EventPaste:
-		if ev.End() {
+		if ev.Start() {
+			m.StartPaste()
+		} else if m.isPasting && ev.End() {
 			// set clipboard and return to stamp tool
 			m.SetClipboardFromPasteData()
 			m.SetTool(&StampTool{})
 			m.isPasting = false
 		}
+		return true
 	case *tcell.EventKey:
+		if !m.isPasting {
+			return false
+		}
 		switch ev.Key() {
 		case tcell.KeyRune:
 			r := ev.Rune()
@@ -198,7 +198,10 @@ func (m *MainWidget) HandlePaste(event tcell.Event) {
 		default:
 			m.pasteData = append(m.pasteData, '\n')
 		}
+		return true
 	}
+
+	return false
 }
 
 func (m *MainWidget) HandlePan(event tcell.Event) bool {
@@ -218,7 +221,8 @@ func (m *MainWidget) HandlePan(event tcell.Event) bool {
 			return true
 		}
 	}
-	return false
+	// If we're panning, then don't run any future event handlers
+	return m.isPan
 }
 
 func (m *MainWidget) HandleColorPick(event tcell.Event) bool {
@@ -277,6 +281,9 @@ func (m *MainWidget) HandleColorPick(event tcell.Event) bool {
 }
 
 func (m *MainWidget) HandleColorSelect(event tcell.Event) bool {
+	if m.colorSelectState == ColorSelectNone {
+		return false
+	}
 	switch ev := event.(type) {
 	case *tcell.EventKey:
 		r := ev.Rune()
