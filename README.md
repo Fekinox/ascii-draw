@@ -28,6 +28,7 @@ An ASCII art program written in Go, powered by the [tcell](https://github.com/gd
 
 ## Controls
 
+|Key|Command|
 |-----------------|--------------------------------------------------------------------------------------------------------------------|
 | Any key         | Set the current brush character                                                                                    |
 | Esc             | Return to brush tool                                                                                               |
@@ -43,16 +44,40 @@ An ASCII art program written in Go, powered by the [tcell](https://github.com/gd
 | Alt+drag down   | Grab background color                                                                                              |
 | Alt+z           | Undo                                                                                                               |
 | Alt+Z           | Redo                                                                                                               |
+| Alt+c|Copy selection|
+| Alt+x|Cut selection|
+| Alt+v|Paste selection|
+| Ctrl+Shift+v|Paste clipboard|
+| Alt+a|Reset selection|
+| Alt+,|Clear selection|
+| Alt+.|Fill selection|
 | Alt+1           | Toggle alpha lock: drawing commands do not modify empty characters (space ` ` characters with no background color) |
 | Alt+2           | Toggle character lock: drawing commands do not change the character of a cell.                                     |
 | Alt+3           | Toggle foreground lock: drawing commands do not change the foreground color of a cell.                             |
 | Alt+4           | Toggle background lock: drawing commands do not change the background color of a cell.                             |
 
+|Key|Command|
 |---|---|
 |Alt+s|Save to binary file|
 |Alt+l|Load from binary file|
 |Alt+i|Import plain text|
 |Alt+p|Export plain text|
+
+|Key|Command|
+|---|---|
+|Esc|Enter brush tool|
+|(Brush) Click and drag|Draw on canvas|
+|Alt+e|Enter line tool|
+|(Line) Click and drag|Draw a straight line|
+|Alt+r|Enter lasso tool|
+|(Lasso) Click and drag|Create a freeform selection|
+|Alt+t|Enter translate tool|
+|(Translate) Click and drag|Move selected characters
+|Alt+[|Enter resize tool|
+|(Resize) Click and drag outside of region|Set new resize rectangle|
+|(Resize) Click and drag inside of region|Move resize bounds|
+|(Resize) Click and drag on edge of region|Move edge of resize region|
+|(Resize) Enter|Commit canvas resize|
 
 ## Limitations
 
