@@ -9,6 +9,8 @@ import (
 )
 
 const MAX_BRUSH_RADIUS int = 99
+const INIT_WIDTH = 80
+const INIT_HEIGHT = 24
 
 type ColorPickState int
 
@@ -105,7 +107,7 @@ type MainWidget struct {
 	isStaging     bool
 	stagingCanvas *Buffer
 
-	bufferHistory  []*Buffer
+	undoHistory    []*Buffer
 	undoHistoryPos int
 
 	isPasting bool
@@ -119,7 +121,7 @@ var (
 func Init(a *App, screen tcell.Screen) *MainWidget {
 	w := &MainWidget{
 		app:            a,
-		canvas:         MakeBuffer(80, 24),
+		canvas:         MakeBuffer(INIT_WIDTH, INIT_HEIGHT),
 		brushCharacter: '#',
 		brushRadius:    1,
 	}
@@ -129,6 +131,7 @@ func Init(a *App, screen tcell.Screen) *MainWidget {
 	w.ClearTool()
 
 	w.cursorX, w.cursorY = w.sw/2, w.sh/2
+	a.Logger.Println("Successfully initialized program")
 	return w
 }
 
@@ -444,7 +447,7 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 
 				// Undo
 				case 'z':
-					m.undoHistoryPos = min(len(m.bufferHistory), m.undoHistoryPos+1)
+					m.undoHistoryPos = min(len(m.undoHistory), m.undoHistoryPos+1)
 
 				// Redo
 				case 'Z':
@@ -572,6 +575,18 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	if m.colorSelectState != ColorSelectNone {
 		DrawColorSelector(p, x, y+1, m.colorSelectState)
 	}
+
+	// undo history
+	undoHistoryLine := "Already at newest change"
+	if m.isStaging {
+		undoHistoryLine = "Modification in progress..."
+	} else if len(m.undoHistory) > 0 && m.undoHistoryPos == len(m.undoHistory) {
+		undoHistoryLine = "Already at oldest change"
+	} else if m.undoHistoryPos > 0 {
+		undoHistoryLine = fmt.Sprintf("Undo: %d/%d", len(m.undoHistory)-m.undoHistoryPos, len(m.undoHistory))
+	}
+
+	SetString(p, x+1, y+m.sh+m.sy, undoHistoryLine, tcell.StyleDefault)
 }
 
 func (m *MainWidget) DrawStatusBar(p Painter, x, y, w, h int) {
@@ -714,6 +729,7 @@ func (m *MainWidget) Export(s string) {
 	}
 
 	msg = fmt.Sprintf("Successfully exported to plaintext file %s", s)
+	m.app.Logger.Printf("Successfully exported to plaintext file %s", s)
 }
 
 func (m *MainWidget) Import(s string) {
@@ -740,6 +756,7 @@ func (m *MainWidget) Import(s string) {
 	m.Commit()
 
 	msg = fmt.Sprintf("Successfully imported plaintext file %s", s)
+	m.app.Logger.Printf("Successfully imported plaintext file %s", s)
 }
 
 func (m *MainWidget) Save(s string) {
@@ -761,6 +778,7 @@ func (m *MainWidget) Save(s string) {
 	}
 
 	msg = fmt.Sprintf("Successfully saved %s", s)
+	m.app.Logger.Printf("Successfully saved binary file %s", s)
 }
 
 func (m *MainWidget) Load(s string) {
@@ -787,6 +805,7 @@ func (m *MainWidget) Load(s string) {
 	m.Commit()
 
 	msg = fmt.Sprintf("Successfully loaded %s", s)
+	m.app.Logger.Printf("Successfully loaded binary file %s", s)
 }
 
 func (m *MainWidget) SetClipboard() {
@@ -838,15 +857,28 @@ func (m *MainWidget) Commit() {
 		return
 	}
 
+	curCanvas := m.canvas
 	if m.undoHistoryPos > 0 {
-		m.bufferHistory = m.bufferHistory[:len(m.bufferHistory)-(m.undoHistoryPos-1)]
+		curCanvas = m.undoHistory[len(m.undoHistory)-m.undoHistoryPos]
+	}
+
+	if curCanvas.Equal(m.stagingCanvas) {
+		m.isStaging = false
+		m.stagingCanvas = nil
+		return
+	}
+
+	if m.undoHistoryPos > 0 {
+		m.undoHistory = m.undoHistory[:len(m.undoHistory)-(m.undoHistoryPos-1)]
 		m.undoHistoryPos = 0
 	} else {
-		m.bufferHistory = append(m.bufferHistory, m.canvas)
+		m.undoHistory = append(m.undoHistory, m.canvas)
 	}
 	m.isStaging = false
 	m.canvas = m.stagingCanvas
 	m.stagingCanvas = nil
+
+	m.app.Logger.Println("Committed new action to canvas")
 }
 
 func (m *MainWidget) Rollback() {
@@ -861,7 +893,7 @@ func (m *MainWidget) CurrentCanvas() *Buffer {
 	if m.isStaging {
 		return m.stagingCanvas
 	} else if m.undoHistoryPos > 0 {
-		return m.bufferHistory[len(m.bufferHistory)-m.undoHistoryPos]
+		return m.undoHistory[len(m.undoHistory)-m.undoHistoryPos]
 	} else {
 		return m.canvas
 	}
