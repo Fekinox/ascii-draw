@@ -2,6 +2,7 @@ package main
 
 import (
 	"strings"
+	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -50,19 +51,23 @@ func (t *TextWidget) HandleEvent(event tcell.Event) {
 		case tcell.KeyEnter:
 			t.OnSubmit(t.Contents)
 		case tcell.KeyRune:
+			r := ev.Rune()
+			if r != ' ' && !unicode.IsGraphic(r) {
+				return
+			}
 			var sb strings.Builder
 			var done bool
 			var i int
 			for _, r := range t.Contents {
 				if i == t.Cursor {
 					done = true
-					sb.WriteRune(ev.Rune())
+					sb.WriteRune(r)
 				}
 				sb.WriteRune(r)
 				i++
 			}
 			if !done {
-				sb.WriteRune(ev.Rune())
+				sb.WriteRune(r)
 			}
 			t.Contents = sb.String()
 			t.Cursor += 1

@@ -149,6 +149,14 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 		return
 	}
 
+	// Prompt tool grabs all other input events
+	if m.currentTool != nil {
+		if _, ok := m.currentTool.(*PromptTool); ok {
+			m.currentTool.HandleEvent(m, event)
+			return
+		}
+	}
+
 	switch ev := event.(type) {
 	case *tcell.EventKey:
 		if ev.Key() == tcell.KeyRune {
@@ -175,13 +183,6 @@ func (m *MainWidget) StartPaste() {
 }
 
 func (m *MainWidget) HandlePaste(event tcell.Event) bool {
-	// FIXME: hack to deal with pasting into prompt tool. maybe in future allow event handlers
-	// to return booleans?
-	if m.currentTool != nil {
-		if _, ok := m.currentTool.(*PromptTool); ok {
-			return true
-		}
-	}
 	switch ev := event.(type) {
 	case *tcell.EventPaste:
 		if ev.Start() {
