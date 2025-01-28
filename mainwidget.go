@@ -112,6 +112,8 @@ type MainWidget struct {
 
 	isPasting bool
 	pasteData []byte
+
+	currentFile string
 }
 
 var (
@@ -359,6 +361,14 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 				switch ev.Rune() {
 				// Quit
 				case 'q':
+					if m.HasUnsavedChanges() {
+						m.statusLine = "Unsaved changes"
+					} else {
+						m.app.WillQuit = true
+					}
+
+				// Quit without saving
+				case 'Q':
 					m.app.WillQuit = true
 
 				// Show help page
@@ -907,4 +917,9 @@ func (m *MainWidget) IsPaintTool() bool {
 		return true
 	}
 	return false
+}
+
+func (m *MainWidget) HasUnsavedChanges() bool {
+	return len(m.undoHistory) != 0 && len(m.undoHistory) != m.undoHistoryPos
+
 }
