@@ -9,6 +9,8 @@ import (
 )
 
 const MAX_BRUSH_RADIUS int = 99
+const INIT_WIDTH = 80
+const INIT_HEIGHT = 24
 
 type ColorPickState int
 
@@ -119,7 +121,7 @@ var (
 func Init(a *App, screen tcell.Screen) *MainWidget {
 	w := &MainWidget{
 		app:            a,
-		canvas:         MakeBuffer(80, 24),
+		canvas:         MakeBuffer(INIT_WIDTH, INIT_HEIGHT),
 		brushCharacter: '#',
 		brushRadius:    1,
 	}
