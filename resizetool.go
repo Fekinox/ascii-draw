@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"math"
-	"slices"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -25,78 +23,99 @@ const (
 	ResizeToolRight
 )
 
-type EdgeDistance struct {
-	Edge     ResizeToolEdge
-	Distance int
+type ResizeToolHandle struct {
+	pos   Position
+	edges ResizeToolEdge
 }
 
 type ResizeTool struct {
 	state       ResizeToolState
 	dims        Area
 	stagingDims Area
+	handles     [8]ResizeToolHandle
 
 	origX      int
 	origY      int
 	expandEdge ResizeToolEdge
 }
 
-func lineDistance(ax, ay, bx, by, x, y int) int {
-	dlx, dly := bx-ax, by-ay
-	dpx, dpy := x-ax, y-ay
-
-	param := float64(dlx*dpx+dly*dpy) / float64(dlx*dlx+dly*dly)
-	projX, projY := float64(dlx)*param, float64(dly)*param
-	perpX, perpY := float64(dpx)-projX, float64(dpy)-projY
-
-	if param < 0 || param > 1 {
-		return int(math.Sqrt(float64(min(
-			(x-ax)*(x-ax)+(y-ay)*(y-ay),
-			(x-bx)*(x-bx)+(y-by)*(y-by)))))
-	} else {
-		return int(math.Sqrt(perpX*perpX + perpY*perpY))
+func (r *ResizeTool) InitHandles() {
+	// top left
+	r.handles[0] = ResizeToolHandle{
+		edges: ResizeToolTop | ResizeToolLeft,
 	}
+	// top
+	r.handles[1] = ResizeToolHandle{
+		edges: ResizeToolTop,
+	}
+	// top right
+	r.handles[2] = ResizeToolHandle{
+		edges: ResizeToolTop | ResizeToolRight,
+	}
+	// right
+	r.handles[3] = ResizeToolHandle{
+		edges: ResizeToolRight,
+	}
+	// bottom right
+	r.handles[4] = ResizeToolHandle{
+		edges: ResizeToolBottom | ResizeToolRight,
+	}
+	// bottom
+	r.handles[5] = ResizeToolHandle{
+		edges: ResizeToolBottom,
+	}
+	// bottom left
+	r.handles[6] = ResizeToolHandle{
+		edges: ResizeToolBottom | ResizeToolLeft,
+	}
+	// left
+	r.handles[7] = ResizeToolHandle{
+		edges: ResizeToolLeft,
+	}
+	r.RepositionHandles(r.dims)
 }
 
-func edgeDistances(rect Area, x, y int) [4]EdgeDistance {
-	var res [4]EdgeDistance
-	res[0] = EdgeDistance{
-		Edge: ResizeToolLeft,
-		Distance: lineDistance(
-			rect.X, rect.Y,
-			rect.X, rect.Y+rect.Height-1,
-			x, y,
-		),
+func (r *ResizeTool) RepositionHandles(d Area) {
+	// top left
+	r.handles[0].pos = Position{
+		X: d.X - 2,
+		Y: d.Y - 2,
 	}
-	res[1] = EdgeDistance{
-		Edge: ResizeToolTop,
-		Distance: lineDistance(
-			rect.X, rect.Y,
-			rect.X+rect.Width-1, rect.Y,
-			x, y,
-		),
+	// top
+	r.handles[1].pos = Position{
+		X: d.X + d.Width/2 + 1,
+		Y: d.Y - 2,
 	}
-	res[2] = EdgeDistance{
-		Edge: ResizeToolBottom,
-		Distance: lineDistance(
-			rect.X, rect.Y+rect.Height-1,
-			rect.X+rect.Width-1, rect.Y+rect.Height-1,
-			x, y,
-		),
+	// top right
+	r.handles[2].pos = Position{
+		X: d.X + d.Width + 3,
+		Y: d.Y - 2,
 	}
-	res[3] = EdgeDistance{
-		Edge: ResizeToolRight,
-		Distance: lineDistance(
-			rect.X+rect.Width-1, rect.Y,
-			rect.X+rect.Width-1, rect.Y+rect.Height-1,
-			x, y,
-		),
+	// right
+	r.handles[3].pos = Position{
+		X: d.X + d.Width + 3,
+		Y: d.Y + d.Height/2 + 1,
 	}
-
-	slices.SortFunc(res[:], func(e1, e2 EdgeDistance) int {
-		return e1.Distance - e2.Distance
-	})
-
-	return res
+	// bottom right
+	r.handles[4].pos = Position{
+		X: d.X + d.Width + 3,
+		Y: d.Y + d.Height + 3,
+	}
+	// bottom
+	r.handles[5].pos = Position{
+		X: d.X + d.Width/2 + 1,
+		Y: d.Y + d.Height + 3,
+	}
+	// bottom left
+	r.handles[6].pos = Position{
+		X: d.X - 2,
+		Y: d.Y + d.Height + 3,
+	}
+	// left
+	r.handles[7].pos = Position{
+		X: d.X - 2,
+		Y: d.Y + d.Height/2 + 1,
+	}
 }
 
 func (r *ResizeTool) SetDimsFromSelection(b *Buffer) {
@@ -133,17 +152,19 @@ func (r *ResizeTool) HandleEvent(m *MainWidget, event tcell.Event) {
 				r.stagingDims = r.dims
 				r.origX, r.origY = cx, cy
 
-				distances := edgeDistances(r.dims, cx, cy)
+				minDist := SquaredDistance(cx, cy, r.handles[0].pos.X, r.handles[0].pos.Y)
+				var argmin int
+				for j, h := range r.handles {
+					d := SquaredDistance(cx, cy, h.pos.X, h.pos.Y)
+					if d < minDist {
+						minDist = d
+						argmin = j
+					}
+				}
 
-				for _, d := range distances {
-					if d.Distance > 3 {
-						break
-					}
-					if d.Distance < 3 {
-						r.state = ResizeToolExpanding
-						r.expandEdge = d.Edge
-						break
-					}
+				if minDist <= 4 {
+					r.state = ResizeToolExpanding
+					r.expandEdge = r.handles[argmin].edges
 				}
 			}
 			if r.state == ResizeToolNone {
@@ -158,12 +179,14 @@ func (r *ResizeTool) HandleEvent(m *MainWidget, event tcell.Event) {
 			if r.state == ResizeToolMoving {
 				r.stagingDims.X = r.dims.X + dx
 				r.stagingDims.Y = r.dims.Y + dy
+				r.RepositionHandles(r.stagingDims)
 			} else if r.state == ResizeToolCreating {
 
 				minX, maxX := min(cx, r.origX), max(cx, r.origX)
 				minY, maxY := min(cy, r.origY), max(cy, r.origY)
 				r.stagingDims.X, r.stagingDims.Y = minX, minY
 				r.stagingDims.Width, r.stagingDims.Height = maxX-minX+1, maxY-minY+1
+				r.RepositionHandles(r.stagingDims)
 			} else if r.state == ResizeToolExpanding {
 				if r.expandEdge&ResizeToolLeft != 0 {
 					if r.dims.Width-dx >= 1 {
@@ -200,6 +223,7 @@ func (r *ResizeTool) HandleEvent(m *MainWidget, event tcell.Event) {
 						r.stagingDims.Height = -r.dims.Height - dy
 					}
 				}
+				r.RepositionHandles(r.stagingDims)
 			}
 		} else if r.state != ResizeToolNone {
 			r.dims = r.stagingDims
@@ -245,9 +269,15 @@ func (r *ResizeTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64)
 		Height: d.Height + 2,
 	}
 	BorderBox(crop, a, tcell.StyleDefault.Foreground(tcell.ColorRed))
+
+	for _, h := range r.handles {
+		crop.SetByte(h.pos.X+ox, h.pos.Y+oy, '@', tcell.StyleDefault)
+	}
+
 	dimsString := fmt.Sprintf("%d x %d", d.Width, d.Height)
 	dimsStringX, dimsStringY := x+m.sx+ox+d.X-1, y+m.sy+oy+d.Y-2
 	dimsStringX = max(m.sx, min(m.sx+m.sw-len(dimsString), dimsStringX))
 	dimsStringY = max(m.sy, min(m.sy+m.sh-1, dimsStringY))
 	SetString(crop, dimsStringX, dimsStringY, dimsString, tcell.StyleDefault)
+
 }

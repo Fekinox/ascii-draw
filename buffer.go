@@ -389,18 +389,18 @@ func (b *Buffer) BrushStrokes(radius int, cell Cell, points []Position, mask Loc
 	}
 }
 
-func (b *Buffer) FillSelection(c Cell) {
+func (b *Buffer) FillSelection(c Cell, mask LockMask) {
 	for y := range b.Data.Height {
 		for x := range b.Data.Width {
 			if b.SelectionMask.MustGet(x, y) {
-				b.Data.Set(x, y, c)
+				b.SetCell(x, y, c, mask)
 			}
 		}
 	}
 }
 
 func (b *Buffer) ClearSelection() {
-	b.FillSelection(Cell{Value: ' '})
+	b.FillSelection(Cell{Value: ' '}, 0)
 }
 
 func (b *Buffer) CopySelection() Grid[Cell] {

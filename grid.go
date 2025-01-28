@@ -13,11 +13,6 @@ type Grid[T any] struct {
 	Height int
 }
 
-type Position struct {
-	X int
-	Y int
-}
-
 func MakeGrid[T any](width, height int, def T) Grid[T] {
 	data := make([]T, width*height)
 	for i := 0; i < width*height; i++ {
