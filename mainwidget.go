@@ -261,8 +261,9 @@ func (m *MainWidget) HandleColorPick(event tcell.Event) bool {
 				m.colorPickState = ColorPickHover
 				canvasX, canvasY := m.cursorX-m.offsetX, m.cursorY-m.offsetY
 
-				if m.canvas.Data.InBounds(canvasX, canvasY) {
-					cell := m.canvas.Data.MustGet(canvasX, canvasY)
+				curCanvas := m.CurrentCanvas()
+				if curCanvas.Data.InBounds(canvasX, canvasY) {
+					cell := curCanvas.Data.MustGet(canvasX, canvasY)
 					m.hoverChar = cell.Value
 					m.hoverFg, m.hoverBg, _ = cell.Style.Decompose()
 				}
@@ -395,8 +396,9 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 
 				// Clear canvas
 				case 'n':
+					curCanvas := m.CurrentCanvas()
 					m.Stage()
-					m.stagingCanvas = MakeBuffer(m.canvas.Data.Width, m.canvas.Data.Height)
+					m.stagingCanvas = MakeBuffer(curCanvas.Data.Width, curCanvas.Data.Height)
 					m.Commit()
 
 				// Begin lasso selection
@@ -603,19 +605,14 @@ func (m *MainWidget) DrawStatusBar(p Painter, x, y, w, h int) {
 
 func (m *MainWidget) DrawCanvas(p Painter, offX, offY int) {
 	// Rendering the canvas
-	curCanvas := m.canvas
-	if m.isStaging {
-		curCanvas = m.stagingCanvas
-	} else if m.undoHistoryPos > 0 {
-		curCanvas = m.bufferHistory[len(m.bufferHistory)-m.undoHistoryPos]
-	}
+	curCanvas := m.CurrentCanvas()
 	curCanvas.RenderWith(p, offX, offY, true)
 
 	BorderBox(p, Area{
 		X:      offX - 1,
 		Y:      offY - 1,
-		Width:  m.canvas.Data.Width + 2,
-		Height: m.canvas.Data.Height + 2,
+		Width:  curCanvas.Data.Width + 2,
+		Height: curCanvas.Data.Height + 2,
 	}, tcell.StyleDefault)
 
 	// selection mask
@@ -645,13 +642,14 @@ func (m *MainWidget) ScaleOffset(oldsw, oldsh, newsw, newsh int) {
 }
 
 func (m *MainWidget) ResizeCanvas(newRect Area) {
+	curCanvas := m.CurrentCanvas()
 	m.Stage()
 	m.stagingCanvas = MakeBuffer(newRect.Width, newRect.Height)
-	for y := range m.canvas.Data.Height {
-		for x := range m.canvas.Data.Width {
+	for y := range curCanvas.Data.Height {
+		for x := range curCanvas.Data.Width {
 			nx, ny := x-newRect.X, y-newRect.Y
-			m.stagingCanvas.Data.Set(nx, ny, m.canvas.Data.MustGet(x, y))
-			m.stagingCanvas.SelectionMask.Set(nx, ny, m.canvas.SelectionMask.MustGet(x, y))
+			m.stagingCanvas.Data.Set(nx, ny, curCanvas.Data.MustGet(x, y))
+			m.stagingCanvas.SelectionMask.Set(nx, ny, curCanvas.SelectionMask.MustGet(x, y))
 		}
 	}
 	m.Commit()
@@ -661,7 +659,8 @@ func (m *MainWidget) ResizeCanvas(newRect Area) {
 }
 
 func (m *MainWidget) CenterCanvas() {
-	cw, ch := m.canvas.Data.Width, m.canvas.Data.Height
+	curCanvas := m.CurrentCanvas()
+	cw, ch := curCanvas.Data.Width, curCanvas.Data.Height
 	m.offsetX = (m.sw - cw) / 2
 	m.offsetY = (m.sh - ch) / 2
 }
@@ -709,7 +708,7 @@ func (m *MainWidget) Export(s string) {
 		msg = err.Error()
 		return
 	}
-	if err := m.canvas.Export(f); err != nil {
+	if err := m.CurrentCanvas().Export(f); err != nil {
 		msg = err.Error()
 		return
 	}
@@ -756,7 +755,7 @@ func (m *MainWidget) Save(s string) {
 		msg = err.Error()
 		return
 	}
-	if err := m.canvas.Save(f); err != nil {
+	if err := m.CurrentCanvas().Save(f); err != nil {
 		msg = err.Error()
 		return
 	}
@@ -790,12 +789,8 @@ func (m *MainWidget) Load(s string) {
 	msg = fmt.Sprintf("Successfully loaded %s", s)
 }
 
-func (m *MainWidget) ReplaceSelectionMask(topLeft Position, mask Grid[bool]) {
-	m.canvas.SetSelection(mask, topLeft)
-}
-
 func (m *MainWidget) SetClipboard() {
-	m.clipboard = m.canvas.CopySelection()
+	m.clipboard = m.CurrentCanvas().CopySelection()
 }
 
 func (m *MainWidget) SetClipboardFromPasteData() {
@@ -833,10 +828,7 @@ func (m *MainWidget) Stage() {
 		return
 	}
 
-	curCanvas := m.canvas
-	if m.undoHistoryPos > 0 {
-		curCanvas = m.bufferHistory[len(m.bufferHistory)-m.undoHistoryPos]
-	}
+	curCanvas := m.CurrentCanvas()
 	m.isStaging = true
 	m.stagingCanvas = curCanvas.Clone()
 }

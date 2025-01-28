@@ -139,6 +139,7 @@ func (r *ResizeTool) SetDimsFromSelection(b *Buffer) {
 
 	r.dims.X, r.dims.Y = minX, minY
 	r.dims.Width, r.dims.Height = maxX-minX+1, maxY-minY+1
+	r.stagingDims = r.dims
 }
 
 func (r *ResizeTool) HandleEvent(m *MainWidget, event tcell.Event) {
