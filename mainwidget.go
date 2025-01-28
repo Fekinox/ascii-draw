@@ -379,26 +379,26 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 
 				// Export to text
 				case 'p':
-					m.SetTool(MakePromptTool(m.Export, "export path..."))
+					m.SetTool(MakePromptTool(m.Export, "export path...", ""))
 
 				// Import from text
 				case 'i':
 					if m.HasUnsavedChanges() {
 						m.statusLine = "Unsaved changes"
 					} else {
-						m.SetTool(MakePromptTool(m.Import, "import path..."))
+						m.SetTool(MakePromptTool(m.Import, "import path...", ""))
 					}
 
 				// Save to binary
 				case 's':
-					m.SetTool(MakePromptTool(m.Save, "save path..."))
+					m.SetTool(MakePromptTool(m.Save, "save path...", m.currentFile))
 
 				// Load from binary
 				case 'l':
 					if m.HasUnsavedChanges() {
 						m.statusLine = "Unsaved changes"
 					} else {
-						m.SetTool(MakePromptTool(m.Load, "load path..."))
+						m.SetTool(MakePromptTool(m.Load, "load path...", ""))
 					}
 
 				// Select foreground color
@@ -808,6 +808,7 @@ func (m *MainWidget) Save(s string) {
 		msg = err.Error()
 		return
 	}
+	m.currentFile = s
 	m.currentUndoIndex = m.undoHistoryPos
 	m.historyChanged = false
 
@@ -840,6 +841,7 @@ func (m *MainWidget) Load(s string) {
 
 	m.Reset()
 	m.ClearHistory()
+	m.currentFile = s
 	m.currentUndoIndex = m.undoHistoryPos
 	m.historyChanged = false
 

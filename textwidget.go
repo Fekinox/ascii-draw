@@ -3,6 +3,7 @@ package main
 import (
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -97,4 +98,9 @@ func (t *TextWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 		i++
 	}
 	p.SetStyle(x+1+col, y, tcell.StyleDefault.Reverse(true))
+}
+
+func (t *TextWidget) SetContents(s string) {
+	t.Contents = s
+	t.Cursor = utf8.RuneCountInString(s)
 }
