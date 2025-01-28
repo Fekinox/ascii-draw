@@ -613,6 +613,20 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	}
 
 	SetString(p, x+1, y+m.sh+m.sy, undoHistoryLine, tcell.StyleDefault)
+
+	// current filename
+	currentFile := m.currentFile
+	unsavedIndicator := ""
+	if currentFile == "" {
+		currentFile = "New File"
+	}
+	if m.HasUnsavedChanges() {
+		unsavedIndicator = "* "
+	}
+
+	fileString := fmt.Sprintf("%s%s", unsavedIndicator, currentFile)
+
+	SetString(p, x+m.sw-Condition.StringWidth(fileString)+m.sx, y+m.sh+m.sy, fileString, tcell.StyleDefault)
 }
 
 func (m *MainWidget) DrawStatusBar(p Painter, x, y, w, h int) {
