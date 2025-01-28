@@ -850,6 +850,17 @@ func (m *MainWidget) Commit() {
 		return
 	}
 
+	curCanvas := m.canvas
+	if m.undoHistoryPos > 0 {
+		curCanvas = m.bufferHistory[len(m.bufferHistory)-m.undoHistoryPos]
+	}
+
+	if curCanvas.Equal(m.stagingCanvas) {
+		m.isStaging = false
+		m.stagingCanvas = nil
+		return
+	}
+
 	if m.undoHistoryPos > 0 {
 		m.bufferHistory = m.bufferHistory[:len(m.bufferHistory)-(m.undoHistoryPos-1)]
 		m.undoHistoryPos = 0

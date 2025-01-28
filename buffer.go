@@ -427,3 +427,22 @@ func (b *Buffer) CopySelection() Grid[Cell] {
 
 	return res
 }
+
+func (b *Buffer) Equal(other *Buffer) bool {
+	if b.Data.Width != other.Data.Width || b.Data.Height != other.Data.Height {
+		return false
+	}
+	for y := range b.Data.Height {
+		for x := range b.Data.Width {
+			c1, c2 := b.Data.MustGet(x, y), other.Data.MustGet(x, y)
+			fg1, bg1, _ := c1.Style.Decompose()
+			fg2, bg2, _ := c2.Style.Decompose()
+			sameSpace := c1.Value == ' ' && c1.Value == c2.Value && bg1 == bg2
+			sameNoSpace := c1.Value != ' ' && c1.Value == c2.Value && fg1 == fg2 && bg1 == bg2
+			if !sameSpace && !sameNoSpace {
+				return false
+			}
+		}
+	}
+	return true
+}
