@@ -783,6 +783,9 @@ func (m *MainWidget) Import(s string) {
 
 	m.Reset()
 	m.ClearHistory()
+	m.currentFile = ""
+	m.currentUndoIndex = m.undoHistoryPos
+	m.historyChanged = false
 
 	msg = fmt.Sprintf("Successfully imported plaintext file %s", s)
 	m.app.Logger.Printf("Successfully imported plaintext file %s", s)
@@ -805,6 +808,8 @@ func (m *MainWidget) Save(s string) {
 		msg = err.Error()
 		return
 	}
+	m.currentUndoIndex = m.undoHistoryPos
+	m.historyChanged = false
 
 	msg = fmt.Sprintf("Successfully saved %s", s)
 	m.app.Logger.Printf("Successfully saved binary file %s", s)
@@ -835,6 +840,8 @@ func (m *MainWidget) Load(s string) {
 
 	m.Reset()
 	m.ClearHistory()
+	m.currentUndoIndex = m.undoHistoryPos
+	m.historyChanged = false
 
 	msg = fmt.Sprintf("Successfully loaded %s", s)
 	m.app.Logger.Printf("Successfully loaded binary file %s", s)
@@ -902,11 +909,14 @@ func (m *MainWidget) Commit() {
 
 	if m.undoHistoryPos < len(m.undoHistory) {
 		m.undoHistory = m.undoHistory[:m.undoHistoryPos+1]
-		m.undoHistoryPos++
 	} else {
 		m.undoHistory = append(m.undoHistory, m.canvas)
-		m.undoHistoryPos++
 	}
+
+	if m.currentUndoIndex > m.undoHistoryPos {
+		m.historyChanged = true
+	}
+	m.undoHistoryPos++
 	m.isStaging = false
 	m.canvas = m.stagingCanvas
 	m.stagingCanvas = nil
@@ -943,7 +953,7 @@ func (m *MainWidget) IsPaintTool() bool {
 }
 
 func (m *MainWidget) HasUnsavedChanges() bool {
-	return false
+	return m.historyChanged || m.undoHistoryPos != m.currentUndoIndex
 }
 
 func (m *MainWidget) Reset() {
