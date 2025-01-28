@@ -67,7 +67,8 @@ func (a *App) Quit() {
 	maybePanic := recover()
 	Screen.Fini()
 	if maybePanic != nil {
-		a.Logger.Printf("Panic: %v", maybePanic)
+		a.Logger.Printf("Panic: %v\n", maybePanic)
+		log.Fatalf("Panic: %v\n", maybePanic)
 	} else {
 		a.Logger.Println("Exited with no errors")
 	}
