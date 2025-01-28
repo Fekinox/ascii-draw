@@ -572,6 +572,18 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	if m.colorSelectState != ColorSelectNone {
 		DrawColorSelector(p, x, y+1, m.colorSelectState)
 	}
+
+	// undo history
+	undoHistoryLine := "Already at newest change"
+	if m.isStaging {
+		undoHistoryLine = "Modification in progress..."
+	} else if len(m.bufferHistory) > 0 && m.undoHistoryPos == len(m.bufferHistory) {
+		undoHistoryLine = "Already at oldest change"
+	} else if m.undoHistoryPos > 0 {
+		undoHistoryLine = fmt.Sprintf("Undo: %d/%d", len(m.bufferHistory)-m.undoHistoryPos, len(m.bufferHistory))
+	}
+
+	SetString(p, x+1, y+m.sh+m.sy, undoHistoryLine, tcell.StyleDefault)
 }
 
 func (m *MainWidget) DrawStatusBar(p Painter, x, y, w, h int) {
