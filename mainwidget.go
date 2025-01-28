@@ -49,11 +49,6 @@ const (
 	LockMaskBg
 )
 
-type UndoHistoryEntry struct {
-	Buffer *Buffer
-	Index  int
-}
-
 var colorMap = map[rune]int{
 	'1': 0, '!': 8,
 	'2': 1, '@': 9,
@@ -614,7 +609,7 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	} else if len(m.undoHistory) > 0 && m.undoHistoryPos == 0 {
 		undoHistoryLine = "Already at oldest change"
 	} else if m.undoHistoryPos < len(m.undoHistory) {
-		undoHistoryLine = fmt.Sprintf("Undo: %d/%d", m.undoHistoryPos, len(m.undoHistory))
+		undoHistoryLine = fmt.Sprintf("Undo: %d/%d", m.undoHistoryPos+1, len(m.undoHistory)+1)
 	}
 
 	SetString(p, x+1, y+m.sh+m.sy, undoHistoryLine, tcell.StyleDefault)
