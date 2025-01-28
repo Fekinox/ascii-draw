@@ -49,6 +49,11 @@ const (
 	LockMaskBg
 )
 
+type UndoHistoryEntry struct {
+	Buffer *Buffer
+	Index  int
+}
+
 var colorMap = map[rune]int{
 	'1': 0, '!': 8,
 	'2': 1, '@': 9,
@@ -109,11 +114,13 @@ type MainWidget struct {
 
 	undoHistory    []*Buffer
 	undoHistoryPos int
+	historyChanged bool
 
 	isPasting bool
 	pasteData []byte
 
-	currentFile string
+	currentFile      string
+	currentUndoIndex int
 }
 
 var (
@@ -381,7 +388,11 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 
 				// Import from text
 				case 'i':
-					m.SetTool(MakePromptTool(m.Import, "import path..."))
+					if m.HasUnsavedChanges() {
+						m.statusLine = "Unsaved changes"
+					} else {
+						m.SetTool(MakePromptTool(m.Import, "import path..."))
+					}
 
 				// Save to binary
 				case 's':
@@ -389,7 +400,11 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 
 				// Load from binary
 				case 'l':
-					m.SetTool(MakePromptTool(m.Load, "load path..."))
+					if m.HasUnsavedChanges() {
+						m.statusLine = "Unsaved changes"
+					} else {
+						m.SetTool(MakePromptTool(m.Load, "load path..."))
+					}
 
 				// Select foreground color
 				case 'f':
@@ -409,10 +424,16 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 
 				// Clear canvas
 				case 'n':
-					curCanvas := m.CurrentCanvas()
-					m.Stage()
-					m.stagingCanvas = MakeBuffer(curCanvas.Data.Width, curCanvas.Data.Height)
-					m.Commit()
+					if m.HasUnsavedChanges() {
+						m.statusLine = "Unsaved changes"
+					} else {
+						m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
+
+						m.Reset()
+						m.ClearHistory()
+
+						m.cursorX, m.cursorY = m.sw/2, m.sh/2
+					}
 
 				// Begin lasso selection
 				case 'r':
@@ -457,11 +478,11 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 
 				// Undo
 				case 'z':
-					m.undoHistoryPos = min(len(m.undoHistory), m.undoHistoryPos+1)
+					m.undoHistoryPos = max(0, m.undoHistoryPos-1)
 
 				// Redo
 				case 'Z':
-					m.undoHistoryPos = max(0, m.undoHistoryPos-1)
+					m.undoHistoryPos = min(len(m.undoHistory), m.undoHistoryPos+1)
 
 				// Resize
 				case '[':
@@ -590,10 +611,10 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	undoHistoryLine := "Already at newest change"
 	if m.isStaging {
 		undoHistoryLine = "Modification in progress..."
-	} else if len(m.undoHistory) > 0 && m.undoHistoryPos == len(m.undoHistory) {
+	} else if len(m.undoHistory) > 0 && m.undoHistoryPos == 0 {
 		undoHistoryLine = "Already at oldest change"
-	} else if m.undoHistoryPos > 0 {
-		undoHistoryLine = fmt.Sprintf("Undo: %d/%d", len(m.undoHistory)-m.undoHistoryPos, len(m.undoHistory))
+	} else if m.undoHistoryPos < len(m.undoHistory) {
+		undoHistoryLine = fmt.Sprintf("Undo: %d/%d", m.undoHistoryPos, len(m.undoHistory))
 	}
 
 	SetString(p, x+1, y+m.sh+m.sy, undoHistoryLine, tcell.StyleDefault)
@@ -765,6 +786,9 @@ func (m *MainWidget) Import(s string) {
 
 	m.Commit()
 
+	m.Reset()
+	m.ClearHistory()
+
 	msg = fmt.Sprintf("Successfully imported plaintext file %s", s)
 	m.app.Logger.Printf("Successfully imported plaintext file %s", s)
 }
@@ -813,6 +837,9 @@ func (m *MainWidget) Load(s string) {
 	}
 
 	m.Commit()
+
+	m.Reset()
+	m.ClearHistory()
 
 	msg = fmt.Sprintf("Successfully loaded %s", s)
 	m.app.Logger.Printf("Successfully loaded binary file %s", s)
@@ -868,8 +895,8 @@ func (m *MainWidget) Commit() {
 	}
 
 	curCanvas := m.canvas
-	if m.undoHistoryPos > 0 {
-		curCanvas = m.undoHistory[len(m.undoHistory)-m.undoHistoryPos]
+	if m.undoHistoryPos < len(m.undoHistory) {
+		curCanvas = m.undoHistory[m.undoHistoryPos]
 	}
 
 	if curCanvas.Equal(m.stagingCanvas) {
@@ -878,11 +905,12 @@ func (m *MainWidget) Commit() {
 		return
 	}
 
-	if m.undoHistoryPos > 0 {
-		m.undoHistory = m.undoHistory[:len(m.undoHistory)-(m.undoHistoryPos-1)]
-		m.undoHistoryPos = 0
+	if m.undoHistoryPos < len(m.undoHistory) {
+		m.undoHistory = m.undoHistory[:m.undoHistoryPos+1]
+		m.undoHistoryPos++
 	} else {
 		m.undoHistory = append(m.undoHistory, m.canvas)
+		m.undoHistoryPos++
 	}
 	m.isStaging = false
 	m.canvas = m.stagingCanvas
@@ -902,8 +930,8 @@ func (m *MainWidget) Rollback() {
 func (m *MainWidget) CurrentCanvas() *Buffer {
 	if m.isStaging {
 		return m.stagingCanvas
-	} else if m.undoHistoryPos > 0 {
-		return m.undoHistory[len(m.undoHistory)-m.undoHistoryPos]
+	} else if m.undoHistoryPos < len(m.undoHistory) {
+		return m.undoHistory[m.undoHistoryPos]
 	} else {
 		return m.canvas
 	}
@@ -920,6 +948,20 @@ func (m *MainWidget) IsPaintTool() bool {
 }
 
 func (m *MainWidget) HasUnsavedChanges() bool {
-	return len(m.undoHistory) != 0 && len(m.undoHistory) != m.undoHistoryPos
+	return false
+}
 
+func (m *MainWidget) Reset() {
+	m.Rollback()
+	m.ClearTool()
+	m.CenterCanvas()
+	m.isPan = false
+	m.colorPickState = ColorPickNone
+	m.colorSelectState = ColorSelectNone
+	m.lockMask = 0
+}
+
+func (m *MainWidget) ClearHistory() {
+	m.undoHistoryPos = 0
+	m.undoHistory = m.undoHistory[:0]
 }
