@@ -129,6 +129,7 @@ func Init(a *App, screen tcell.Screen) *MainWidget {
 	w.ClearTool()
 
 	w.cursorX, w.cursorY = w.sw/2, w.sh/2
+	a.Logger.Println("Successfully initialized program")
 	return w
 }
 
