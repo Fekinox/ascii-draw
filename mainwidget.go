@@ -105,7 +105,7 @@ type MainWidget struct {
 	isStaging     bool
 	stagingCanvas *Buffer
 
-	bufferHistory  []*Buffer
+	undoHistory    []*Buffer
 	undoHistoryPos int
 
 	isPasting bool
@@ -444,7 +444,7 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 
 				// Undo
 				case 'z':
-					m.undoHistoryPos = min(len(m.bufferHistory), m.undoHistoryPos+1)
+					m.undoHistoryPos = min(len(m.undoHistory), m.undoHistoryPos+1)
 
 				// Redo
 				case 'Z':
@@ -577,10 +577,10 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	undoHistoryLine := "Already at newest change"
 	if m.isStaging {
 		undoHistoryLine = "Modification in progress..."
-	} else if len(m.bufferHistory) > 0 && m.undoHistoryPos == len(m.bufferHistory) {
+	} else if len(m.undoHistory) > 0 && m.undoHistoryPos == len(m.undoHistory) {
 		undoHistoryLine = "Already at oldest change"
 	} else if m.undoHistoryPos > 0 {
-		undoHistoryLine = fmt.Sprintf("Undo: %d/%d", len(m.bufferHistory)-m.undoHistoryPos, len(m.bufferHistory))
+		undoHistoryLine = fmt.Sprintf("Undo: %d/%d", len(m.undoHistory)-m.undoHistoryPos, len(m.undoHistory))
 	}
 
 	SetString(p, x+1, y+m.sh+m.sy, undoHistoryLine, tcell.StyleDefault)
@@ -852,7 +852,7 @@ func (m *MainWidget) Commit() {
 
 	curCanvas := m.canvas
 	if m.undoHistoryPos > 0 {
-		curCanvas = m.bufferHistory[len(m.bufferHistory)-m.undoHistoryPos]
+		curCanvas = m.undoHistory[len(m.undoHistory)-m.undoHistoryPos]
 	}
 
 	if curCanvas.Equal(m.stagingCanvas) {
@@ -862,10 +862,10 @@ func (m *MainWidget) Commit() {
 	}
 
 	if m.undoHistoryPos > 0 {
-		m.bufferHistory = m.bufferHistory[:len(m.bufferHistory)-(m.undoHistoryPos-1)]
+		m.undoHistory = m.undoHistory[:len(m.undoHistory)-(m.undoHistoryPos-1)]
 		m.undoHistoryPos = 0
 	} else {
-		m.bufferHistory = append(m.bufferHistory, m.canvas)
+		m.undoHistory = append(m.undoHistory, m.canvas)
 	}
 	m.isStaging = false
 	m.canvas = m.stagingCanvas
@@ -884,7 +884,7 @@ func (m *MainWidget) CurrentCanvas() *Buffer {
 	if m.isStaging {
 		return m.stagingCanvas
 	} else if m.undoHistoryPos > 0 {
-		return m.bufferHistory[len(m.bufferHistory)-m.undoHistoryPos]
+		return m.undoHistory[len(m.undoHistory)-m.undoHistoryPos]
 	} else {
 		return m.canvas
 	}
