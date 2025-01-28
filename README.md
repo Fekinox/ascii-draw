@@ -34,6 +34,7 @@ An ASCII art program written in Go, powered by the [tcell](https://github.com/gd
 | Esc             | Return to brush tool                                                                                               |
 | Alt+h           | Show help page                                                                                                     |
 | Alt+q           | Quit                                                                                                               |
+| Alt+Shift+q     | Quit without saving changes |
 | Alt+f           | Select foreground color                                                                                            |
 | Alt+g           | Select background color                                                                                            |
 | Alt+=           | Increase brush radius                                                                                              |
@@ -43,7 +44,7 @@ An ASCII art program written in Go, powered by the [tcell](https://github.com/gd
 | Alt+drag up     | Grab foreground color                                                                                              |
 | Alt+drag down   | Grab background color                                                                                              |
 | Alt+z           | Undo                                                                                                               |
-| Alt+Z           | Redo                                                                                                               |
+| Alt+Shift+z     | Redo                                                                                                               |
 | Alt+c|Copy selection|
 | Alt+x|Cut selection|
 | Alt+v|Paste selection|
