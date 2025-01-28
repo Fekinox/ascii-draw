@@ -5,6 +5,8 @@ import (
 	"slices"
 )
 
+// Given a list of points, construct a mask consisting of points on the interior of the
+// given region.
 func CreateMask(positions []Position) (Position, Grid[bool]) {
 	if len(positions) == 0 {
 		return Position{}, MakeGrid(0, 0, false)

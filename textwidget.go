@@ -2,6 +2,7 @@ package main
 
 import (
 	"strings"
+	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -33,10 +34,16 @@ func (t *TextWidget) HandleEvent(event tcell.Event) {
 			}
 			t.Cursor--
 			var sb strings.Builder
-			sb.WriteString(t.Contents[:t.Cursor])
-			sb.WriteString(t.Contents[t.Cursor+1:])
-			s := sb.String()
-			t.Contents = s
+			var i int
+			for _, r := range t.Contents {
+				if i == t.Cursor {
+					i++
+					continue
+				}
+				sb.WriteRune(r)
+				i++
+			}
+			t.Contents = sb.String()
 		case tcell.KeyLeft:
 			t.Cursor = max(0, t.Cursor-1)
 		case tcell.KeyRight:
@@ -44,12 +51,26 @@ func (t *TextWidget) HandleEvent(event tcell.Event) {
 		case tcell.KeyEnter:
 			t.OnSubmit(t.Contents)
 		case tcell.KeyRune:
+			r := ev.Rune()
+			if r != ' ' && !unicode.IsGraphic(r) {
+				return
+			}
 			var sb strings.Builder
-			sb.WriteString(t.Contents[:t.Cursor])
-			sb.WriteRune(ev.Rune())
-			sb.WriteString(t.Contents[t.Cursor:])
+			var done bool
+			var i int
+			for _, r := range t.Contents {
+				if i == t.Cursor {
+					done = true
+					sb.WriteRune(r)
+				}
+				sb.WriteRune(r)
+				i++
+			}
+			if !done {
+				sb.WriteRune(r)
+			}
 			t.Contents = sb.String()
-			t.Cursor++
+			t.Cursor += 1
 		}
 	}
 }
@@ -67,5 +88,13 @@ func (t *TextWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	} else {
 		SetString(p, x+1, y, t.Contents, tcell.StyleDefault)
 	}
-	p.SetStyle(x+1+t.Cursor, y, tcell.StyleDefault.Reverse(true))
+	var i, col int
+	for _, r := range t.Contents {
+		if i == t.Cursor {
+			break
+		}
+		col += Condition.RuneWidth(r)
+		i++
+	}
+	p.SetStyle(x+1+col, y, tcell.StyleDefault.Reverse(true))
 }

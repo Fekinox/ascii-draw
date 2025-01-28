@@ -51,12 +51,6 @@ func (l *LineTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
 			l.origX, l.origY,
 			m.cursorX-m.offsetX, m.cursorY-m.offsetY) {
 			if m.canvas.Data.InBounds(pt.X, pt.Y) {
-				// p.SetByte(
-				// 	pt.X,
-				// 	pt.Y,
-				// 	m.brushCharacter,
-				// 	tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
-				// )
 				FillRegion(
 					crop,
 					pt.X-m.brushRadius/2+m.offsetX+m.sx, pt.Y-m.brushRadius/2+m.offsetY+m.sy,

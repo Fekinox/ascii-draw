@@ -13,25 +13,37 @@ const MAX_BRUSH_RADIUS int = 99
 type ColorPickState int
 
 const (
+	// Not currently color picking.
 	ColorPickNone ColorPickState = iota
+	// User is hovering over a cell in the grid to sample its color.
 	ColorPickHover
+	// User is clicking and dragging on a cell.
 	ColorPickDrag
 )
 
 type ColorSelectState int
 
 const (
+	// Color selector is inactive.
 	ColorSelectNone ColorSelectState = iota
+	// Color selector for the foreground is active.
 	ColorSelectFg
+	// Color selector for the background is active.
 	ColorSelectBg
 )
 
 type LockMask int
 
 const (
+	// If set, makes painting operations ignore empty cells. Empty cells are cells where the
+	// character is the space character (` `) and where the background color is the terminal
+	// default.
 	LockMaskAlpha LockMask = 1 << iota
+	// If set, painting operations do not modify the character of a cell.
 	LockMaskChar
+	// If set, painting operations do not modify the foreground color of a cell.
 	LockMaskFg
+	// If set, painting operations do not modify the background color of a cell.
 	LockMaskBg
 )
 
@@ -115,19 +127,24 @@ func Init(a *App, screen tcell.Screen) *MainWidget {
 	w.ScreenResize(screen.Size())
 	w.CenterCanvas()
 	w.ClearTool()
+
+	w.cursorX, w.cursorY = w.sw/2, w.sh/2
 	return w
 }
 
 func (m *MainWidget) HandleEvent(event tcell.Event) {
-	if m.isPasting {
-		m.HandlePaste(event)
-		return
-	}
-
+	// Events are handled in the following order:
+	// - Console resize events will automatically resize the canvas and scale the offset
+	// accordingly.
+	// - Any kind of panning event (either starting or stopping panning)
+	// - Any color picking event (clicking alt and dragging)
+	// - If the color selector is active, then any color selection command
+	// - Any alt+_ shortcut
+	// - If a prompt tool is active, it grabs all incoming events
+	// - If the current character pressed is a space or a printable character,
+	// then the brush character is set.
+	// - Finally it falls through to the current tool if all handlers fail.
 	switch ev := event.(type) {
-	case *tcell.EventPaste:
-		m.StartPaste()
-		return
 	case *tcell.EventResize:
 		oldsw, oldsh := m.sw, m.sh
 		m.ScreenResize(ev.Size())
@@ -143,51 +160,62 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 		return
 	}
 
-	if m.isPan {
-		return
-	}
-
 	if handled := m.HandleColorPick(event); handled {
 		return
 	}
 
-	if m.colorSelectState != ColorSelectNone {
-		if handled := m.HandleColorSelect(event); handled {
-			return
-		}
+	if handled := m.HandleColorSelect(event); handled {
+		return
 	}
 
 	if handled := m.HandleShortcuts(event); handled {
 		return
 	}
 
+	if m.currentTool != nil {
+		if _, ok := m.currentTool.(*PromptTool); ok {
+			m.currentTool.HandleEvent(m, event)
+			return
+		}
+	}
+
 	switch ev := event.(type) {
 	case *tcell.EventKey:
 		if ev.Key() == tcell.KeyRune {
-			if r := ev.Rune(); r < unicode.MaxASCII && r >= 0x20 {
-				m.brushCharacter = byte(r)
+			r := ev.Rune()
+			if r > unicode.MaxASCII {
+				r = '?'
+			} else if r <= 0x20 {
+				r = ' '
 			}
+			m.brushCharacter = byte(r)
 		}
 	}
 
 	m.currentTool.HandleEvent(m, event)
+
+	if handled := m.HandlePaste(event); handled {
+		return
+	}
 }
 
-func (m *MainWidget) StartPaste() {
-	m.isPasting = true
-	m.pasteData = []byte{}
-}
-
-func (m *MainWidget) HandlePaste(event tcell.Event) {
+func (m *MainWidget) HandlePaste(event tcell.Event) bool {
 	switch ev := event.(type) {
 	case *tcell.EventPaste:
-		if ev.End() {
+		if ev.Start() {
+			m.isPasting = true
+			m.pasteData = []byte{}
+		} else if m.isPasting && ev.End() {
 			// set clipboard and return to stamp tool
 			m.SetClipboardFromPasteData()
 			m.SetTool(&StampTool{})
 			m.isPasting = false
 		}
+		return true
 	case *tcell.EventKey:
+		if !m.isPasting {
+			return false
+		}
 		switch ev.Key() {
 		case tcell.KeyRune:
 			r := ev.Rune()
@@ -198,7 +226,10 @@ func (m *MainWidget) HandlePaste(event tcell.Event) {
 		default:
 			m.pasteData = append(m.pasteData, '\n')
 		}
+		return true
 	}
+
+	return false
 }
 
 func (m *MainWidget) HandlePan(event tcell.Event) bool {
@@ -218,7 +249,8 @@ func (m *MainWidget) HandlePan(event tcell.Event) bool {
 			return true
 		}
 	}
-	return false
+	// If we're panning, then don't run any future event handlers
+	return m.isPan
 }
 
 func (m *MainWidget) HandleColorPick(event tcell.Event) bool {
@@ -277,6 +309,10 @@ func (m *MainWidget) HandleColorPick(event tcell.Event) bool {
 }
 
 func (m *MainWidget) HandleColorSelect(event tcell.Event) bool {
+	if m.colorSelectState == ColorSelectNone {
+		return false
+	}
+
 	switch ev := event.(type) {
 	case *tcell.EventKey:
 		r := ev.Rune()
@@ -317,24 +353,31 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 			if ev.Modifiers()&tcell.ModAlt != 0 {
 				handled := true
 				switch ev.Rune() {
+				// Quit
 				case 'q':
 					m.app.WillQuit = true
 
+				// Show help page
 				case 'h':
 					m.SetTool(&HelpTool{})
 
+				// Export to text
 				case 'p':
 					m.SetTool(MakePromptTool(m.Export, "export path..."))
 
+				// Import from text
 				case 'i':
 					m.SetTool(MakePromptTool(m.Import, "import path..."))
 
+				// Save to binary
 				case 's':
 					m.SetTool(MakePromptTool(m.Save, "save path..."))
 
+				// Load from binary
 				case 'l':
 					m.SetTool(MakePromptTool(m.Load, "load path..."))
 
+				// Select foreground color
 				case 'f':
 					if m.colorSelectState != ColorSelectFg {
 						m.colorSelectState = ColorSelectFg
@@ -342,6 +385,7 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 						m.colorSelectState = ColorSelectNone
 					}
 
+				// Select background color
 				case 'g':
 					if m.colorSelectState != ColorSelectBg {
 						m.colorSelectState = ColorSelectBg
@@ -349,34 +393,42 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 						m.colorSelectState = ColorSelectNone
 					}
 
+				// Clear canvas
 				case 'n':
 					m.Stage()
 					m.stagingCanvas = MakeBuffer(m.canvas.Data.Width, m.canvas.Data.Height)
 					m.Commit()
 
+				// Begin lasso selection
 				case 'r':
 					m.SetTool(&LassoTool{})
 
+				// Start translating
 				case 't':
 					m.SetTool(&TranslateTool{})
 
+				// Enter line tool
 				case 'e':
 					m.SetTool(&LineTool{})
 
+				// Deselect
 				case 'a':
 					m.Stage()
 					m.stagingCanvas.Deselect()
 					m.Commit()
 
+				// Copy
 				case 'c':
 					m.SetClipboard()
 
+				// Cut
 				case 'x':
 					m.SetClipboard()
 					m.Stage()
 					m.stagingCanvas.ClearSelection()
 					m.Commit()
 
+				// Paste
 				case 'v':
 					m.SetTool(&StampTool{})
 
@@ -396,34 +448,43 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 				case 'Z':
 					m.undoHistoryPos = max(0, m.undoHistoryPos-1)
 
+				// Resize
 				case '[':
 					t := &ResizeTool{}
 					t.SetDimsFromSelection(m.CurrentCanvas())
+					t.InitHandles()
 					m.SetTool(t)
 
+				// Toggle alpha lock
 				case '1':
 					m.lockMask ^= LockMaskAlpha
 
+				// Toggle character lock
 				case '2':
 					m.lockMask ^= LockMaskChar
 
+				// Toggle foreground color lock
 				case '3':
 					m.lockMask ^= LockMaskFg
 
+				// Toggle background color lock
 				case '4':
 					m.lockMask ^= LockMaskBg
 
+				// Clear selection
 				case ',':
 					m.Stage()
 					m.stagingCanvas.ClearSelection()
 					m.Commit()
 
+				// Fill selection with current brush
 				case '.':
 					m.Stage()
-					m.stagingCanvas.FillSelection(Cell{
+					c := Cell{
 						Value: m.brushCharacter,
 						Style: tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
-					})
+					}
+					m.stagingCanvas.FillSelection(c, m.lockMask)
 					m.Commit()
 
 				default:

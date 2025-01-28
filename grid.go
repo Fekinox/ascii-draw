@@ -13,11 +13,6 @@ type Grid[T any] struct {
 	Height int
 }
 
-type Position struct {
-	X int
-	Y int
-}
-
 func MakeGrid[T any](width, height int, def T) Grid[T] {
 	data := make([]T, width*height)
 	for i := 0; i < width*height; i++ {
@@ -76,15 +71,6 @@ func GridFromSlices[T any](slices ...[]T) Grid[T] {
 		Width:  width,
 		Height: height,
 	}
-}
-
-func GridFromStrings(strings ...string) Grid[rune] {
-	slices := make([][]rune, len(strings))
-	for i := 0; i < len(strings); i++ {
-		slices[i] = []rune(strings[i])
-	}
-
-	return GridFromSlices(slices...)
 }
 
 // Ignores non-Unicode characters.
@@ -185,12 +171,5 @@ func (g *Grid[T]) Resize(ox, oy int, neww, newh int, def T) Grid[T] {
 func (g *Grid[T]) ShallowClone() Grid[T] {
 	return MakeGridWith(g.Width, g.Height, func(x, y int) T {
 		return g.MustGet(x, y)
-	})
-}
-
-func ShiftedDifference(g Grid[bool], dx, dy int) Grid[bool] {
-	return MakeGridWith(g.Width, g.Height, func(x, y int) bool {
-		valAtOldPos, outOfBoundsAtOldPos := g.Get(x-dx, y-dy)
-		return g.MustGet(x, y) && (!valAtOldPos || outOfBoundsAtOldPos)
 	})
 }
