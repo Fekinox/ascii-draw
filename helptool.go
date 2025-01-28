@@ -17,6 +17,7 @@ var helpPages [][][]string = [][][]string{
 			"esc: return to brush tool",
 			"alt+h: show this help page",
 			"alt+q: quit",
+			"alt+Q: force quit",
 			"alt+f: select fg color",
 			"alt+g: select bg color",
 			"alt+=: increase brush radius",
