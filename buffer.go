@@ -446,3 +446,16 @@ func (b *Buffer) Equal(other *Buffer) bool {
 	}
 	return true
 }
+
+func (b *Buffer) IsBlank() bool {
+	for y := range b.Data.Height {
+		for x := range b.Data.Width {
+			c := b.Data.MustGet(x, y)
+			_, bg, _ := c.Style.Decompose()
+			if c.Value != ' ' || bg != tcell.ColorDefault {
+				return false
+			}
+		}
+	}
+	return true
+}

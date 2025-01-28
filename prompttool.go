@@ -8,7 +8,7 @@ type PromptTool struct {
 	Text TextWidget
 }
 
-func MakePromptTool(onSubmit func(s string), hint string) *PromptTool {
+func MakePromptTool(onSubmit func(s string), hint, initContents string) *PromptTool {
 	t := &PromptTool{
 		Text: TextWidget{
 			Active: true,
@@ -17,6 +17,7 @@ func MakePromptTool(onSubmit func(s string), hint string) *PromptTool {
 	}
 
 	t.Text.OnSubmit = onSubmit
+	t.Text.SetContents(initContents)
 	return t
 }
 
