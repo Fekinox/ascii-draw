@@ -729,6 +729,7 @@ func (m *MainWidget) Export(s string) {
 	}
 
 	msg = fmt.Sprintf("Successfully exported to plaintext file %s", s)
+	m.app.Logger.Printf("Successfully exported to plaintext file %s", s)
 }
 
 func (m *MainWidget) Import(s string) {
@@ -755,6 +756,7 @@ func (m *MainWidget) Import(s string) {
 	m.Commit()
 
 	msg = fmt.Sprintf("Successfully imported plaintext file %s", s)
+	m.app.Logger.Printf("Successfully imported plaintext file %s", s)
 }
 
 func (m *MainWidget) Save(s string) {
@@ -776,6 +778,7 @@ func (m *MainWidget) Save(s string) {
 	}
 
 	msg = fmt.Sprintf("Successfully saved %s", s)
+	m.app.Logger.Printf("Successfully saved binary file %s", s)
 }
 
 func (m *MainWidget) Load(s string) {
@@ -802,6 +805,7 @@ func (m *MainWidget) Load(s string) {
 	m.Commit()
 
 	msg = fmt.Sprintf("Successfully loaded %s", s)
+	m.app.Logger.Printf("Successfully loaded binary file %s", s)
 }
 
 func (m *MainWidget) SetClipboard() {
@@ -873,6 +877,8 @@ func (m *MainWidget) Commit() {
 	m.isStaging = false
 	m.canvas = m.stagingCanvas
 	m.stagingCanvas = nil
+
+	m.app.Logger.Println("Committed new action to canvas")
 }
 
 func (m *MainWidget) Rollback() {
