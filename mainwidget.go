@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
@@ -94,6 +93,9 @@ type MainWidget struct {
 	hasTool     bool
 	currentTool Tool
 
+	hasModalTool     bool
+	currentModalTool Tool
+
 	statusLine string
 
 	brushCharacter byte
@@ -141,6 +143,7 @@ func Init(a *App, screen tcell.Screen) *MainWidget {
 
 func (m *MainWidget) HandleEvent(event tcell.Event) {
 	// Events are handled in the following order:
+	// - If a modal tool is active, it grabs all non-critical events.
 	// - Console resize events will automatically resize the canvas and scale the offset
 	// accordingly.
 	// - Any kind of panning event (either starting or stopping panning)
@@ -161,6 +164,20 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 		cx, cy := ev.Position()
 		cx, cy = cx-m.sx, cy-m.sy
 		m.cursorX, m.cursorY = cx, cy
+	case *tcell.EventKey:
+		if ev.Key() == tcell.KeyEscape {
+			if m.hasModalTool {
+				m.ClearModalTool()
+				return
+			}
+			m.ClearTool()
+			return
+		}
+	}
+
+	if m.hasModalTool {
+		m.currentModalTool.HandleEvent(m, event)
+		return
 	}
 
 	if handled := m.HandlePan(event); handled {
@@ -351,12 +368,6 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 			return true
 		}
 
-		// FIXME: hack
-		if ev.Key() == tcell.KeyEscape {
-			m.ClearTool()
-			return true
-		}
-
 		if ev.Key() == tcell.KeyRune {
 			if ev.Modifiers()&tcell.ModAlt != 0 {
 				handled := true
@@ -375,30 +386,50 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 
 				// Show help page
 				case 'h':
-					m.SetTool(&HelpTool{})
+					m.SetModalTool(&HelpTool{})
 
 				// Export to text
 				case 'p':
-					m.SetTool(MakePromptTool(m.Export, "export path...", ""))
+					m.SetModalTool(MakePromptTool(
+						m.Export,
+						"Export to plaintext",
+						"export path...",
+						"",
+					))
 
 				// Import from text
 				case 'i':
 					if m.HasUnsavedChanges() {
 						m.statusLine = "Unsaved changes"
 					} else {
-						m.SetTool(MakePromptTool(m.Import, "import path...", ""))
+						m.SetModalTool(MakePromptTool(
+							m.Import,
+							"Import plaintext",
+							"import path...",
+							"",
+						))
 					}
 
 				// Save to binary
 				case 's':
-					m.SetTool(MakePromptTool(m.Save, "save path...", m.currentFile))
+					m.SetModalTool(MakePromptTool(
+						m.Save,
+						"Save to ascii-draw file",
+						"save path...",
+						"",
+					))
 
 				// Load from binary
 				case 'l':
 					if m.HasUnsavedChanges() {
 						m.statusLine = "Unsaved changes"
 					} else {
-						m.SetTool(MakePromptTool(m.Load, "load path...", ""))
+						m.SetModalTool(MakePromptTool(
+							m.Load,
+							"Load ascii-draw file",
+							"load path...",
+							"",
+						))
 					}
 
 				// Select foreground color
@@ -627,6 +658,11 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	fileString := fmt.Sprintf("%s%s", unsavedIndicator, currentFile)
 
 	SetString(p, x+m.sw-Condition.StringWidth(fileString)+m.sx, y+m.sh+m.sy, fileString, tcell.StyleDefault)
+
+	// modal tool
+	if m.hasModalTool {
+		m.currentModalTool.Draw(m, p, x, y, w, h, lag)
+	}
 }
 
 func (m *MainWidget) DrawStatusBar(p Painter, x, y, w, h int) {
@@ -734,6 +770,18 @@ func (m *MainWidget) ClearTool() {
 	m.statusLine = ""
 }
 
+func (m *MainWidget) SetModalTool(tool Tool) {
+	m.Rollback()
+	m.hasModalTool = true
+	m.currentModalTool = tool
+}
+
+func (m *MainWidget) ClearModalTool() {
+	m.Rollback()
+	m.hasModalTool = false
+	m.currentModalTool = nil
+}
+
 func (m *MainWidget) SetFgColor(fg int) {
 	if fg == 16 {
 		m.fgColor = tcell.ColorDefault
@@ -754,16 +802,12 @@ func (m *MainWidget) Export(s string) {
 	var msg string
 	defer func() {
 		m.ClearTool()
+		m.ClearModalTool()
 		m.statusLine = msg
 		return
 	}()
 
-	f, err := os.Create(s)
-	if err != nil {
-		msg = err.Error()
-		return
-	}
-	if err := m.CurrentCanvas().Export(f); err != nil {
+	if err := m.CurrentCanvas().ExportToFile(s); err != nil {
 		msg = err.Error()
 		return
 	}
@@ -777,17 +821,12 @@ func (m *MainWidget) Import(s string) {
 	var msg string
 	defer func() {
 		m.ClearTool()
+		m.ClearModalTool()
 		m.statusLine = msg
 		return
 	}()
 
-	f, err := os.Open(s)
-	if err != nil {
-		m.Rollback()
-		msg = err.Error()
-		return
-	}
-	if err := m.stagingCanvas.Import(f); err != nil {
+	if err := m.stagingCanvas.ImportFromFile(s); err != nil {
 		m.Rollback()
 		msg = err.Error()
 		return
@@ -809,16 +848,12 @@ func (m *MainWidget) Save(s string) {
 	var msg string
 	defer func() {
 		m.ClearTool()
+		m.ClearModalTool()
 		m.statusLine = msg
 		return
 	}()
 
-	f, err := os.Create(s)
-	if err != nil {
-		msg = err.Error()
-		return
-	}
-	if err := m.CurrentCanvas().Save(f); err != nil {
+	if err := m.CurrentCanvas().SaveToFile(s); err != nil {
 		msg = err.Error()
 		return
 	}
@@ -835,17 +870,12 @@ func (m *MainWidget) Load(s string) {
 	var msg string
 	defer func() {
 		m.ClearTool()
+		m.ClearModalTool()
 		m.statusLine = msg
 		return
 	}()
 
-	f, err := os.Open(s)
-	if err != nil {
-		msg = err.Error()
-		m.Rollback()
-		return
-	}
-	if err := m.stagingCanvas.Load(f); err != nil {
+	if err := m.stagingCanvas.LoadFromFile(s); err != nil {
 		msg = err.Error()
 		m.Rollback()
 		return

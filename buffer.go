@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -260,6 +261,42 @@ func (b *Buffer) Save(w io.Writer) error {
 	}
 
 	return nil
+}
+
+func (b *Buffer) SaveToFile(s string) error {
+	f, err := os.Create(s)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return b.Save(f)
+}
+
+func (b *Buffer) LoadFromFile(s string) error {
+	f, err := os.Open(s)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return b.Load(f)
+}
+
+func (b *Buffer) ExportToFile(s string) error {
+	f, err := os.Create(s)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return b.Export(f)
+}
+
+func (b *Buffer) ImportFromFile(s string) error {
+	f, err := os.Open(s)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return b.Import(f)
 }
 
 func (b *Buffer) Clone() *Buffer {

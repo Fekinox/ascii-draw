@@ -5,15 +5,17 @@ import (
 )
 
 type PromptTool struct {
-	Text TextWidget
+	Text   TextWidget
+	Prompt string
 }
 
-func MakePromptTool(onSubmit func(s string), hint, initContents string) *PromptTool {
+func MakePromptTool(onSubmit func(s string), prompt, hint, initContents string) *PromptTool {
 	t := &PromptTool{
 		Text: TextWidget{
 			Active: true,
 			Hint:   hint,
 		},
+		Prompt: prompt,
 	}
 
 	t.Text.OnSubmit = onSubmit
@@ -39,5 +41,24 @@ func (e *PromptTool) Draw(
 	x, y, w, h int,
 	lag float64,
 ) {
-	e.Text.Draw(p, x, y, w, h, lag)
+	r := Area{
+		Width:  50,
+		Height: 2,
+	}
+	r.X = x + (w-r.Width)/2
+	r.Y = y + (h-r.Height)/2
+	crop := &CropPainter{
+		p:    p,
+		area: r,
+	}
+	bb := Area{
+		X:      r.X - 1,
+		Y:      r.Y - 1,
+		Width:  r.Width + 2,
+		Height: r.Height + 2,
+	}
+	BorderBox(p, bb, tcell.StyleDefault)
+	FillRegion(p, r.X, r.Y, r.Width, r.Height, ' ', tcell.StyleDefault)
+	SetString(p, r.X, r.Y, e.Prompt, tcell.StyleDefault)
+	e.Text.Draw(crop, r.X, r.Y+1, r.Width, r.Height, lag)
 }

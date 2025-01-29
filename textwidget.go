@@ -9,10 +9,11 @@ import (
 )
 
 type TextWidget struct {
-	Contents string
-	Cursor   int
-	Hint     string
-	Active   bool
+	Contents   string
+	Cursor     int
+	Hint       string
+	Active     bool
+	StartIndex int
 
 	OnSubmit func(s string)
 }
@@ -83,24 +84,40 @@ func (t *TextWidget) Update() {
 }
 
 func (t *TextWidget) Draw(p Painter, x, y, w, h int, lag float64) {
+	t.EnsureCursorVisible(w)
 	if t.Contents == "" {
 		st := tcell.StyleDefault.Foreground(tcell.ColorGray)
-		SetString(p, x+1, y, t.Hint, st)
+		SetString(p, x, y, t.Hint, st)
 	} else {
-		SetString(p, x+1, y, t.Contents, tcell.StyleDefault)
+		s := []rune(t.Contents)[t.StartIndex:]
+		SetString(p, x, y, string(s), tcell.StyleDefault)
 	}
-	var i, col int
-	for _, r := range t.Contents {
-		if i == t.Cursor {
+	var col int
+	for i, r := range []rune(t.Contents)[t.StartIndex:] {
+		if i == t.Cursor-t.StartIndex {
 			break
 		}
 		col += Condition.RuneWidth(r)
 		i++
 	}
-	p.SetStyle(x+1+col, y, tcell.StyleDefault.Reverse(true))
+	p.SetStyle(x+col, y, tcell.StyleDefault.Reverse(true))
 }
 
 func (t *TextWidget) SetContents(s string) {
 	t.Contents = s
 	t.Cursor = utf8.RuneCountInString(s)
+}
+
+func (t *TextWidget) EnsureCursorVisible(w int) {
+	// If cursor is less than the start index, then set the start index to the cursor
+	if t.Cursor < t.StartIndex {
+		t.StartIndex = t.Cursor
+		return
+	}
+	s := []rune(t.Contents)
+	currentWidth := Condition.StringWidth(string(s[t.StartIndex:t.Cursor])) + 1
+	for currentWidth > w {
+		currentWidth -= Condition.RuneWidth(s[t.StartIndex])
+		t.StartIndex++
+	}
 }
