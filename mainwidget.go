@@ -454,6 +454,7 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 						m.statusLine = "Unsaved changes"
 					} else {
 						m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
+						m.currentFile = ""
 
 						m.Reset()
 						m.ClearHistory()
@@ -747,6 +748,7 @@ func (m *MainWidget) ResizeCanvas(newRect Area) {
 	m.offsetX += newRect.X
 	m.offsetY += newRect.Y
 	m.ClearTool()
+	m.ClearModalTool()
 }
 
 func (m *MainWidget) CenterCanvas() {
@@ -1005,10 +1007,13 @@ func (m *MainWidget) HasUnsavedChanges() bool {
 func (m *MainWidget) Reset() {
 	m.Rollback()
 	m.ClearTool()
+	m.ClearModalTool()
 	m.CenterCanvas()
 	m.isPan = false
 	m.colorPickState = ColorPickNone
 	m.colorSelectState = ColorSelectNone
+	m.historyChanged = false
+	m.currentUndoIndex = 0
 	m.lockMask = 0
 }
 
