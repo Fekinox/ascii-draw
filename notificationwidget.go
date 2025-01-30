@@ -3,15 +3,24 @@ package main
 import (
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/gdamore/tcell/v2"
 )
 
 const NOTIFICATION_WIDGET_MAX_WIDTH int = 40
 
+type NotificationPriority int
+
+const (
+	NotificationNormal NotificationPriority = iota
+	NotificationWarning
+	NotificationCritical
+)
+
 type NotificationWidget struct {
 	active    bool
-	priority  int
+	priority  NotificationPriority
 	startTime time.Time
 	header    []string
 	body      []string
@@ -22,24 +31,59 @@ type NotificationWidget struct {
 }
 
 // Greedy word wrapping algorithm
-func wrap(s string, width int) []string {
+func greedyWordWrap(s string, width int) []string {
+	if s == "" {
+		return []string{}
+	}
+	if Condition.StringWidth(s) <= width {
+		return []string{s}
+	}
+
 	var res []string
-	var builder strings.Builder
+	var lineBuilder strings.Builder
+	var wordBuilder strings.Builder
 	var currentWidth int
+	var wordWidth int
 	for _, c := range s {
-		w := Condition.RuneWidth(c)
-		if currentWidth+w > width {
-			currentWidth = w
-			res = append(res, builder.String())
-			builder.Reset()
-			builder.WriteRune(c)
+		if !unicode.IsSpace(c) {
+			wordWidth += Condition.RuneWidth(c)
+			wordBuilder.WriteRune(c)
+			continue
+		}
+		w := wordBuilder.String()
+		wordBuilder.Reset()
+		// if we have a space, mark end of word
+		if currentWidth+wordWidth > width {
+			res = append(res, lineBuilder.String())
+			lineBuilder.Reset()
+			currentWidth = 0
+		}
+		lineBuilder.WriteString(w)
+		currentWidth += wordWidth
+		wordWidth = 0
+
+		if currentWidth+1 > width {
+			res = append(res, lineBuilder.String())
+			lineBuilder.Reset()
+			currentWidth = 0
 		} else {
-			builder.WriteRune(c)
-			currentWidth += w
+			lineBuilder.WriteRune(c)
+			currentWidth += Condition.RuneWidth(c)
 		}
 	}
-	if builder.Len() > 0 {
-		res = append(res, builder.String())
+	if wordBuilder.Len() > 0 {
+		w := wordBuilder.String()
+		if currentWidth+wordWidth > width {
+			res = append(res, lineBuilder.String())
+			lineBuilder.Reset()
+			currentWidth = 0
+		}
+		lineBuilder.WriteString(w)
+		currentWidth += wordWidth + 1
+		wordWidth = 0
+	}
+	if lineBuilder.Len() > 0 {
+		res = append(res, lineBuilder.String())
 	}
 	return res
 }
@@ -98,16 +142,24 @@ func (n *NotificationWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 
 	BorderBox(p, bb, tcell.StyleDefault)
 	for i, l := range n.header {
-		SetString(p, r.X, r.Y+i, l, tcell.StyleDefault.Foreground(tcell.ColorGreen))
+		st := tcell.StyleDefault
+		switch n.priority {
+		case NotificationWarning:
+			st = st.Foreground(tcell.ColorYellow)
+		case NotificationCritical:
+			st = st.Foreground(tcell.ColorRed)
+		}
+		SetString(p, r.X, r.Y+i, l, st)
 	}
 	for i, l := range n.body {
 		SetString(p, r.X, r.Y+i+len(n.header), l, tcell.StyleDefault)
 	}
 }
 
-func (n *NotificationWidget) PushNotification(header string, body string) {
-	n.header = wrap(header, NOTIFICATION_WIDGET_MAX_WIDTH)
-	n.body = wrap(body, NOTIFICATION_WIDGET_MAX_WIDTH)
+func (n *NotificationWidget) PushNotification(header string, body string, p NotificationPriority) {
+	n.header = greedyWordWrap(header, NOTIFICATION_WIDGET_MAX_WIDTH)
+	n.body = greedyWordWrap(body, NOTIFICATION_WIDGET_MAX_WIDTH)
 	n.active = true
+	n.priority = p
 	n.startTime = time.Now()
 }

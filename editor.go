@@ -206,13 +206,6 @@ func (m *Editor) HandleEvent(event tcell.Event) {
 		return
 	}
 
-	if m.currentTool != nil {
-		if _, ok := m.currentTool.(*PromptTool); ok {
-			m.currentTool.HandleEvent(m, event)
-			return
-		}
-	}
-
 	switch ev := event.(type) {
 	case *tcell.EventKey:
 		if ev.Key() == tcell.KeyRune {
@@ -385,7 +378,26 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 				// Quit
 				case 'q':
 					if m.HasUnsavedChanges() {
-						m.statusLine = "Unsaved changes"
+						m.SetModalTool(&YesNoPromptTool{
+							prompt:    "File has unsaved changes, quit?",
+							yesString: "Save changes and quit",
+							yesAction: func() {
+								m.SetModalTool(MakePromptTool(
+									func(s string) {
+										if _, err := m.Save(s); err == nil {
+											m.app.WillQuit = true
+										}
+									},
+									"Save to ascii-draw file and quit",
+									"save path...",
+									m.currentFile,
+								))
+							},
+							noString: "Quit without saving",
+							noAction: func() {
+								m.app.WillQuit = true
+							},
+						})
 					} else {
 						m.app.WillQuit = true
 					}
@@ -410,7 +422,36 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 				// Import from text
 				case 'i':
 					if m.HasUnsavedChanges() {
-						m.statusLine = "Unsaved changes"
+						m.SetModalTool(&YesNoPromptTool{
+							prompt:    "File has unsaved changes, import file?",
+							yesString: "Save changes and import file",
+							yesAction: func() {
+								m.SetModalTool(MakePromptTool(
+									func(s string) {
+										if _, err := m.Save(s); err == nil {
+											m.SetModalTool(MakePromptTool(
+												m.Import,
+												"Import plaintext",
+												"import path...",
+												"",
+											))
+										}
+									},
+									"Save to ascii-draw file",
+									"save path...",
+									m.currentFile,
+								))
+							},
+							noString: "Import file without saving current file",
+							noAction: func() {
+								m.SetModalTool(MakePromptTool(
+									m.Import,
+									"Import plaintext",
+									"import path...",
+									"",
+								))
+							},
+						})
 					} else {
 						m.SetModalTool(MakePromptTool(
 							m.Import,
@@ -423,7 +464,9 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 				// Save to binary
 				case 's':
 					m.SetModalTool(MakePromptTool(
-						m.Save,
+						func(s string) {
+							_, _ = m.Save(s)
+						},
 						"Save to ascii-draw file",
 						"save path...",
 						"",
@@ -432,7 +475,36 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 				// Load from binary
 				case 'l':
 					if m.HasUnsavedChanges() {
-						m.statusLine = "Unsaved changes"
+						m.SetModalTool(&YesNoPromptTool{
+							prompt:    "File has unsaved changes, load file?",
+							yesString: "Save changes and load file",
+							yesAction: func() {
+								m.SetModalTool(MakePromptTool(
+									func(s string) {
+										if _, err := m.Save(s); err == nil {
+											m.SetModalTool(MakePromptTool(
+												m.Load,
+												"Load binary file",
+												"load path...",
+												"",
+											))
+										}
+									},
+									"Save to ascii-draw file",
+									"save path...",
+									m.currentFile,
+								))
+							},
+							noString: "Load file without saving current file",
+							noAction: func() {
+								m.SetModalTool(MakePromptTool(
+									m.Load,
+									"Load ascii-draw file",
+									"load path...",
+									"",
+								))
+							},
+						})
 					} else {
 						m.SetModalTool(MakePromptTool(
 							m.Load,
@@ -461,7 +533,38 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 				// Clear canvas
 				case 'n':
 					if m.HasUnsavedChanges() {
-						m.statusLine = "Unsaved changes"
+						m.SetModalTool(&YesNoPromptTool{
+							prompt:    "File has unsaved changes, create new file?",
+							yesString: "Save changes and create new file",
+							yesAction: func() {
+								m.SetModalTool(MakePromptTool(
+									func(s string) {
+										if _, err := m.Save(s); err == nil {
+											m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
+											m.currentFile = ""
+
+											m.Reset()
+											m.ClearHistory()
+
+											m.cursorX, m.cursorY = m.sw/2, m.sh/2
+										}
+									},
+									"Save to ascii-draw file",
+									"save path...",
+									m.currentFile,
+								))
+							},
+							noString: "Create new file without saving",
+							noAction: func() {
+								m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
+								m.currentFile = ""
+
+								m.Reset()
+								m.ClearHistory()
+
+								m.cursorX, m.cursorY = m.sw/2, m.sh/2
+							},
+						})
 					} else {
 						m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
 						m.currentFile = ""
@@ -837,15 +940,19 @@ func (m *Editor) SetBgColor(bg int) {
 
 func (m *Editor) Export(s string) {
 	var msg string
+	var err error
 	defer func() {
 		m.ClearTool()
 		m.ClearModalTool()
-		m.notification.PushNotification("", msg)
-		return
+		if err != nil {
+			m.notification.PushNotification("Error", err.Error(), NotificationCritical)
+		} else {
+			m.notification.PushNotification("", msg, NotificationNormal)
+		}
 	}()
 
-	if err := m.CurrentCanvas().ExportToFile(s); err != nil {
-		msg = err.Error()
+	if err1 := m.CurrentCanvas().ExportToFile(s); err1 != nil {
+		err = err1
 		return
 	}
 
@@ -856,16 +963,20 @@ func (m *Editor) Export(s string) {
 func (m *Editor) Import(s string) {
 	m.Stage()
 	var msg string
+	var err error
 	defer func() {
 		m.ClearTool()
 		m.ClearModalTool()
-		m.notification.PushNotification("", msg)
-		return
+		if err != nil {
+			m.notification.PushNotification("Error", err.Error(), NotificationCritical)
+		} else {
+			m.notification.PushNotification("", msg, NotificationNormal)
+		}
 	}()
 
-	if err := m.stagingCanvas.ImportFromFile(s); err != nil {
+	if err1 := m.stagingCanvas.ImportFromFile(s); err1 != nil {
 		m.Rollback()
-		msg = err.Error()
+		err = err1
 		return
 	}
 
@@ -881,17 +992,22 @@ func (m *Editor) Import(s string) {
 	m.app.Logger.Printf("Successfully imported plaintext file %s", s)
 }
 
-func (m *Editor) Save(s string) {
-	var msg string
+// FIXME: this is a massive code smell. maybe make these IO functions error out and have the
+// caller deal with them somehow? i guess the rub is that these processses are inherently
+// asynchronous, so i might need a special way to take care of that
+func (m *Editor) Save(s string) (msg string, err error) {
 	defer func() {
 		m.ClearTool()
 		m.ClearModalTool()
-		m.notification.PushNotification("", msg)
-		return
+		if err != nil {
+			m.notification.PushNotification("Error", err.Error(), NotificationCritical)
+		} else {
+			m.notification.PushNotification("", msg, NotificationNormal)
+		}
 	}()
 
-	if err := m.CurrentCanvas().SaveToFile(s); err != nil {
-		msg = err.Error()
+	if err1 := m.CurrentCanvas().SaveToFile(s); err1 != nil {
+		err = err1
 		return
 	}
 	m.currentFile = s
@@ -900,21 +1016,27 @@ func (m *Editor) Save(s string) {
 
 	msg = fmt.Sprintf("Successfully saved %s", s)
 	m.app.Logger.Printf("Successfully saved binary file %s", s)
+
+	return msg, err
 }
 
 func (m *Editor) Load(s string) {
 	m.Stage()
 	var msg string
+	var err error
 	defer func() {
 		m.ClearTool()
 		m.ClearModalTool()
-		m.notification.PushNotification("", msg)
-		return
+		if err != nil {
+			m.notification.PushNotification("Error", err.Error(), NotificationCritical)
+		} else {
+			m.notification.PushNotification("", msg, NotificationNormal)
+		}
 	}()
 
-	if err := m.stagingCanvas.LoadFromFile(s); err != nil {
-		msg = err.Error()
+	if err1 := m.stagingCanvas.LoadFromFile(s); err1 != nil {
 		m.Rollback()
+		err = err1
 		return
 	}
 
