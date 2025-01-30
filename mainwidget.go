@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"math"
+	"time"
 	"unicode"
 
 	"github.com/gdamore/tcell/v2"
@@ -118,6 +120,8 @@ type MainWidget struct {
 
 	currentFile      string
 	currentUndoIndex int
+
+	startTime time.Time
 }
 
 var (
@@ -130,6 +134,7 @@ func Init(a *App, screen tcell.Screen) *MainWidget {
 		canvas:         MakeBuffer(INIT_WIDTH, INIT_HEIGHT),
 		brushCharacter: '#',
 		brushRadius:    1,
+		startTime:      time.Now(),
 	}
 
 	w.ScreenResize(screen.Size())
@@ -606,7 +611,29 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 
 	// color picker
 	if m.colorPickState == ColorPickHover {
+		t := time.Now().Sub(m.startTime).Seconds()
 		cx, cy := m.cursorX+m.sx, m.cursorY+m.sy
+		cc := m.CurrentCanvas()
+
+		// Draw crosshairs for alignment
+		if cy >= m.sy+canvasOffY && cy < m.sy+canvasOffY+cc.Data.Height {
+			for x := range cc.Data.Width {
+				dt := math.Cos(t*10 - math.Abs(float64(x-(cx-m.sx-canvasOffX)))*1)
+				if dt > 0 {
+					p.SetByte(m.sx+m.offsetX+x, cy, '.', tcell.StyleDefault.Foreground(tcell.ColorWhite))
+				}
+			}
+		}
+
+		if cx >= m.sx+canvasOffX && cx < m.sx+canvasOffX+cc.Data.Width {
+			for y := range cc.Data.Height {
+				dt := math.Cos(t*6 - math.Abs(float64(y-(cy-m.sy-canvasOffY)))*2)
+				if dt > 0 {
+					p.SetByte(cx, m.sy+m.offsetY+y, '.', tcell.StyleDefault.Foreground(tcell.ColorWhite))
+				}
+			}
+		}
+
 		DrawColorPickerState(
 			p, cx, cy,
 			true, false, false,

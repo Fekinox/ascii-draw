@@ -309,14 +309,14 @@ func DrawColorPickerState(
 
 	// char
 	p.SetByte(x+1, y-4, hoverChar, tcell.StyleDefault)
-	SetString(p, x+2, y-4, " char  ", tcell.StyleDefault)
+	SetString(p, x+2, y-4, " char", tcell.StyleDefault)
 
 	// fg
-	SetString(p, x+2, y-3, " fg    ", tcell.StyleDefault)
+	SetString(p, x+2, y-3, " fg  ", tcell.StyleDefault)
 	DrawColorSymbolFG(p, x+1, y-3, hoverFg)
 
 	// bg
-	SetString(p, x+2, y-2, " bg    ", tcell.StyleDefault)
+	SetString(p, x+2, y-2, " bg  ", tcell.StyleDefault)
 	DrawColorSymbolBG(p, x+1, y-2, hoverBg)
 
 	BorderBox(p, rect, tcell.StyleDefault)
