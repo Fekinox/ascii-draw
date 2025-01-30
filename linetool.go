@@ -8,7 +8,7 @@ type LineTool struct {
 	origY      int
 }
 
-func (l *LineTool) HandleEvent(m *MainWidget, event tcell.Event) {
+func (l *LineTool) HandleEvent(m *Editor, event tcell.Event) {
 	switch ev := event.(type) {
 	case *tcell.EventMouse:
 		cx, cy := m.cursorX-m.offsetX, m.cursorY-m.offsetY
@@ -35,7 +35,7 @@ func (l *LineTool) HandleEvent(m *MainWidget, event tcell.Event) {
 	}
 }
 
-func (l *LineTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
+func (l *LineTool) Draw(m *Editor, p Painter, x, y, w, h int, lag float64) {
 	SetString(p, x+m.sx, y+m.sy-1, "Line Tool", tcell.StyleDefault)
 	if l.isDragging {
 		crop := &CropPainter{

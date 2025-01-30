@@ -71,7 +71,7 @@ var helpPages [][][]string = [][][]string{
 	},
 }
 
-func (e *HelpTool) HandleEvent(m *MainWidget, event tcell.Event) {
+func (e *HelpTool) HandleEvent(m *Editor, event tcell.Event) {
 	switch ev := event.(type) {
 	case *tcell.EventKey:
 		if ev.Key() == tcell.KeyTAB {
@@ -80,7 +80,7 @@ func (e *HelpTool) HandleEvent(m *MainWidget, event tcell.Event) {
 	}
 }
 
-func (e *HelpTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
+func (e *HelpTool) Draw(m *Editor, p Painter, x, y, w, h int, lag float64) {
 	r := Area{
 		Width:  70,
 		Height: 20,

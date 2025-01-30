@@ -12,7 +12,7 @@ type BrushTool struct {
 	lastPaintPos Position
 }
 
-func (b *BrushTool) HandleEvent(m *MainWidget, event tcell.Event) {
+func (b *BrushTool) HandleEvent(m *Editor, event tcell.Event) {
 	switch ev := event.(type) {
 	case *tcell.EventMouse:
 		cx, cy := m.cursorX-m.brushRadius/2-m.offsetX, m.cursorY-m.brushRadius/2-m.offsetY
@@ -60,6 +60,6 @@ func (b *BrushTool) HandleEvent(m *MainWidget, event tcell.Event) {
 	}
 }
 
-func (b *BrushTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
+func (b *BrushTool) Draw(m *Editor, p Painter, x, y, w, h int, lag float64) {
 	SetString(p, x+m.sx, y+m.sy-1, "Brush Tool", tcell.StyleDefault)
 }

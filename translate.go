@@ -8,7 +8,7 @@ type TranslateTool struct {
 	origY      int
 }
 
-func (l *TranslateTool) HandleEvent(m *MainWidget, event tcell.Event) {
+func (l *TranslateTool) HandleEvent(m *Editor, event tcell.Event) {
 	switch ev := event.(type) {
 	case *tcell.EventMouse:
 		cx, cy := m.cursorX+m.sx, m.cursorY+m.sy
@@ -32,5 +32,5 @@ func (l *TranslateTool) HandleEvent(m *MainWidget, event tcell.Event) {
 	}
 }
 
-func (l *TranslateTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
+func (l *TranslateTool) Draw(m *Editor, p Painter, x, y, w, h int, lag float64) {
 }

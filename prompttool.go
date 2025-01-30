@@ -27,16 +27,16 @@ func (e *PromptTool) Name() string {
 	return "Export"
 }
 
-func (e *PromptTool) HandleEvent(m *MainWidget, event tcell.Event) {
+func (e *PromptTool) HandleEvent(m *Editor, event tcell.Event) {
 	e.Text.HandleEvent(event)
 }
 
-func (e *PromptTool) Update(m *MainWidget) {
+func (e *PromptTool) Update(m *Editor) {
 	e.Text.Update()
 }
 
 func (e *PromptTool) Draw(
-	m *MainWidget,
+	m *Editor,
 	p Painter,
 	x, y, w, h int,
 	lag float64,

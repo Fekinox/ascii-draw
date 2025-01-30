@@ -142,7 +142,7 @@ func (r *ResizeTool) SetDimsFromSelection(b *Buffer) {
 	r.stagingDims = r.dims
 }
 
-func (r *ResizeTool) HandleEvent(m *MainWidget, event tcell.Event) {
+func (r *ResizeTool) HandleEvent(m *Editor, event tcell.Event) {
 	switch ev := event.(type) {
 	case *tcell.EventMouse:
 		cx, cy := m.cursorX-m.offsetX, m.cursorY-m.offsetY
@@ -241,7 +241,7 @@ func (r *ResizeTool) HandleEvent(m *MainWidget, event tcell.Event) {
 	}
 }
 
-func (r *ResizeTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
+func (r *ResizeTool) Draw(m *Editor, p Painter, x, y, w, h int, lag float64) {
 	SetString(p, x+m.sx, y+m.sy-1, "Resize Tool", tcell.StyleDefault)
 	crop := &CropPainter{
 		p: p,

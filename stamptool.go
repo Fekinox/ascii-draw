@@ -8,7 +8,7 @@ type StampTool struct {
 	lastPaintPos Position
 }
 
-func (l *StampTool) HandleEvent(m *MainWidget, event tcell.Event) {
+func (l *StampTool) HandleEvent(m *Editor, event tcell.Event) {
 	if m.clipboard.Width == 0 || m.clipboard.Height == 0 {
 		return
 	}
@@ -36,7 +36,7 @@ func (l *StampTool) HandleEvent(m *MainWidget, event tcell.Event) {
 	}
 }
 
-func (l *StampTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
+func (l *StampTool) Draw(m *Editor, p Painter, x, y, w, h int, lag float64) {
 	SetString(p, x+m.sx, y+m.sy-1, "Stamp Tool", tcell.StyleDefault)
 	if m.clipboard.Width == 0 || m.clipboard.Height == 0 {
 		return

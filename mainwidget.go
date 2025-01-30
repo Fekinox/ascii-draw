@@ -62,7 +62,7 @@ var colorMap = map[rune]int{
 	'`': 16,
 }
 
-type MainWidget struct {
+type Editor struct {
 	app *App
 
 	sx int
@@ -125,11 +125,11 @@ type MainWidget struct {
 }
 
 var (
-	_ Widget = &MainWidget{}
+	_ Widget = &Editor{}
 )
 
-func Init(a *App, screen tcell.Screen) *MainWidget {
-	w := &MainWidget{
+func Init(a *App, screen tcell.Screen) *Editor {
+	w := &Editor{
 		app:            a,
 		canvas:         MakeBuffer(INIT_WIDTH, INIT_HEIGHT),
 		brushCharacter: '#',
@@ -146,7 +146,7 @@ func Init(a *App, screen tcell.Screen) *MainWidget {
 	return w
 }
 
-func (m *MainWidget) HandleEvent(event tcell.Event) {
+func (m *Editor) HandleEvent(event tcell.Event) {
 	// Events are handled in the following order:
 	// - If a modal tool is active, it grabs all non-critical events.
 	// - Console resize events will automatically resize the canvas and scale the offset
@@ -228,7 +228,7 @@ func (m *MainWidget) HandleEvent(event tcell.Event) {
 	}
 }
 
-func (m *MainWidget) HandlePaste(event tcell.Event) bool {
+func (m *Editor) HandlePaste(event tcell.Event) bool {
 	switch ev := event.(type) {
 	case *tcell.EventPaste:
 		if ev.Start() {
@@ -261,7 +261,7 @@ func (m *MainWidget) HandlePaste(event tcell.Event) bool {
 	return false
 }
 
-func (m *MainWidget) HandlePan(event tcell.Event) bool {
+func (m *Editor) HandlePan(event tcell.Event) bool {
 	switch ev := event.(type) {
 	case *tcell.EventMouse:
 		if ev.Modifiers()&tcell.ModCtrl != 0 &&
@@ -282,7 +282,7 @@ func (m *MainWidget) HandlePan(event tcell.Event) bool {
 	return m.isPan
 }
 
-func (m *MainWidget) HandleColorPick(event tcell.Event) bool {
+func (m *Editor) HandleColorPick(event tcell.Event) bool {
 	switch ev := event.(type) {
 	case *tcell.EventMouse:
 		if ev.Modifiers()&tcell.ModAlt != 0 {
@@ -338,7 +338,7 @@ func (m *MainWidget) HandleColorPick(event tcell.Event) bool {
 	return false
 }
 
-func (m *MainWidget) HandleColorSelect(event tcell.Event) bool {
+func (m *Editor) HandleColorSelect(event tcell.Event) bool {
 	if m.colorSelectState == ColorSelectNone {
 		return false
 	}
@@ -359,7 +359,7 @@ func (m *MainWidget) HandleColorSelect(event tcell.Event) bool {
 	return false
 }
 
-func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
+func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 	switch ev := event.(type) {
 	case *tcell.EventKey:
 		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Key() == tcell.KeyF1 {
@@ -565,10 +565,10 @@ func (m *MainWidget) HandleShortcuts(event tcell.Event) bool {
 	return false
 }
 
-func (m *MainWidget) Update() {
+func (m *Editor) Update() {
 }
 
-func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
+func (m *Editor) Draw(p Painter, x, y, w, h int, lag float64) {
 	// Draw surrounding box of screen
 	r := Area{
 		X:      x + 1,
@@ -693,7 +693,7 @@ func (m *MainWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	}
 }
 
-func (m *MainWidget) DrawStatusBar(p Painter, x, y, w, h int) {
+func (m *Editor) DrawStatusBar(p Painter, x, y, w, h int) {
 	// Draw the statusline
 	SetCenteredString(p, x+w/2, y, m.statusLine, tcell.StyleDefault)
 
@@ -722,7 +722,7 @@ func (m *MainWidget) DrawStatusBar(p Painter, x, y, w, h int) {
 	}
 }
 
-func (m *MainWidget) DrawCanvas(p Painter, offX, offY int) {
+func (m *Editor) DrawCanvas(p Painter, offX, offY int) {
 	// Rendering the canvas
 	curCanvas := m.CurrentCanvas()
 	curCanvas.RenderWith(p, offX, offY, true)
@@ -748,19 +748,19 @@ func (m *MainWidget) DrawCanvas(p Painter, offX, offY int) {
 	}
 }
 
-func (m *MainWidget) ScreenResize(sw, sh int) {
+func (m *Editor) ScreenResize(sw, sh int) {
 	m.sw, m.sh = sw-2, sh-2
 	m.sx, m.sy = 1, 1
 }
 
-func (m *MainWidget) ScaleOffset(oldsw, oldsh, newsw, newsh int) {
+func (m *Editor) ScaleOffset(oldsw, oldsh, newsw, newsh int) {
 	ocx, ocy := m.offsetX-oldsw/2, m.offsetY-oldsh/2
 	sfx, sfy := float64(newsw)/float64(oldsw), float64(newsh)/float64(oldsh)
 	m.offsetX = int(float64(ocx)*sfx) + newsw/2
 	m.offsetY = int(float64(ocy)*sfy) + newsh/2
 }
 
-func (m *MainWidget) ResizeCanvas(newRect Area) {
+func (m *Editor) ResizeCanvas(newRect Area) {
 	curCanvas := m.CurrentCanvas()
 	m.Stage()
 	m.stagingCanvas = MakeBuffer(newRect.Width, newRect.Height)
@@ -778,40 +778,40 @@ func (m *MainWidget) ResizeCanvas(newRect Area) {
 	m.ClearModalTool()
 }
 
-func (m *MainWidget) CenterCanvas() {
+func (m *Editor) CenterCanvas() {
 	curCanvas := m.CurrentCanvas()
 	cw, ch := curCanvas.Data.Width, curCanvas.Data.Height
 	m.offsetX = (m.sw - cw) / 2
 	m.offsetY = (m.sh - ch) / 2
 }
 
-func (m *MainWidget) SetTool(tool Tool) {
+func (m *Editor) SetTool(tool Tool) {
 	m.Rollback()
 	m.hasTool = true
 	m.currentTool = tool
 	m.statusLine = ""
 }
 
-func (m *MainWidget) ClearTool() {
+func (m *Editor) ClearTool() {
 	m.Rollback()
 	m.hasTool = true
 	m.currentTool = &BrushTool{}
 	m.statusLine = ""
 }
 
-func (m *MainWidget) SetModalTool(tool Tool) {
+func (m *Editor) SetModalTool(tool Tool) {
 	m.Rollback()
 	m.hasModalTool = true
 	m.currentModalTool = tool
 }
 
-func (m *MainWidget) ClearModalTool() {
+func (m *Editor) ClearModalTool() {
 	m.Rollback()
 	m.hasModalTool = false
 	m.currentModalTool = nil
 }
 
-func (m *MainWidget) SetFgColor(fg int) {
+func (m *Editor) SetFgColor(fg int) {
 	if fg == 16 {
 		m.fgColor = tcell.ColorDefault
 	} else {
@@ -819,7 +819,7 @@ func (m *MainWidget) SetFgColor(fg int) {
 	}
 }
 
-func (m *MainWidget) SetBgColor(bg int) {
+func (m *Editor) SetBgColor(bg int) {
 	if bg == 16 {
 		m.bgColor = tcell.ColorDefault
 	} else {
@@ -827,7 +827,7 @@ func (m *MainWidget) SetBgColor(bg int) {
 	}
 }
 
-func (m *MainWidget) Export(s string) {
+func (m *Editor) Export(s string) {
 	var msg string
 	defer func() {
 		m.ClearTool()
@@ -845,7 +845,7 @@ func (m *MainWidget) Export(s string) {
 	m.app.Logger.Printf("Successfully exported to plaintext file %s", s)
 }
 
-func (m *MainWidget) Import(s string) {
+func (m *Editor) Import(s string) {
 	m.Stage()
 	var msg string
 	defer func() {
@@ -873,7 +873,7 @@ func (m *MainWidget) Import(s string) {
 	m.app.Logger.Printf("Successfully imported plaintext file %s", s)
 }
 
-func (m *MainWidget) Save(s string) {
+func (m *Editor) Save(s string) {
 	var msg string
 	defer func() {
 		m.ClearTool()
@@ -894,7 +894,7 @@ func (m *MainWidget) Save(s string) {
 	m.app.Logger.Printf("Successfully saved binary file %s", s)
 }
 
-func (m *MainWidget) Load(s string) {
+func (m *Editor) Load(s string) {
 	m.Stage()
 	var msg string
 	defer func() {
@@ -922,11 +922,11 @@ func (m *MainWidget) Load(s string) {
 	m.app.Logger.Printf("Successfully loaded binary file %s", s)
 }
 
-func (m *MainWidget) SetClipboard() {
+func (m *Editor) SetClipboard() {
 	m.clipboard = m.CurrentCanvas().CopySelection()
 }
 
-func (m *MainWidget) SetClipboardFromPasteData() {
+func (m *Editor) SetClipboardFromPasteData() {
 	var width, height int
 	var w = 0
 	for _, c := range m.pasteData {
@@ -956,7 +956,7 @@ func (m *MainWidget) SetClipboardFromPasteData() {
 	m.clipboard = clip
 }
 
-func (m *MainWidget) Stage() {
+func (m *Editor) Stage() {
 	if m.isStaging {
 		return
 	}
@@ -966,7 +966,7 @@ func (m *MainWidget) Stage() {
 	m.stagingCanvas = curCanvas.Clone()
 }
 
-func (m *MainWidget) Commit() {
+func (m *Editor) Commit() {
 	if !m.isStaging {
 		return
 	}
@@ -999,7 +999,7 @@ func (m *MainWidget) Commit() {
 	m.app.Logger.Println("Committed new action to canvas")
 }
 
-func (m *MainWidget) Rollback() {
+func (m *Editor) Rollback() {
 	if !m.isStaging {
 		return
 	}
@@ -1007,7 +1007,7 @@ func (m *MainWidget) Rollback() {
 	m.stagingCanvas = nil
 }
 
-func (m *MainWidget) CurrentCanvas() *Buffer {
+func (m *Editor) CurrentCanvas() *Buffer {
 	if m.isStaging {
 		return m.stagingCanvas
 	} else if m.undoHistoryPos < len(m.undoHistory) {
@@ -1017,7 +1017,7 @@ func (m *MainWidget) CurrentCanvas() *Buffer {
 	}
 }
 
-func (m *MainWidget) IsPaintTool() bool {
+func (m *Editor) IsPaintTool() bool {
 	if _, ok := m.currentTool.(*BrushTool); ok {
 		return true
 	}
@@ -1027,11 +1027,11 @@ func (m *MainWidget) IsPaintTool() bool {
 	return false
 }
 
-func (m *MainWidget) HasUnsavedChanges() bool {
+func (m *Editor) HasUnsavedChanges() bool {
 	return m.historyChanged || m.undoHistoryPos != m.currentUndoIndex
 }
 
-func (m *MainWidget) Reset() {
+func (m *Editor) Reset() {
 	m.Rollback()
 	m.ClearTool()
 	m.ClearModalTool()
@@ -1044,7 +1044,7 @@ func (m *MainWidget) Reset() {
 	m.lockMask = 0
 }
 
-func (m *MainWidget) ClearHistory() {
+func (m *Editor) ClearHistory() {
 	m.undoHistoryPos = 0
 	m.undoHistory = m.undoHistory[:0]
 }

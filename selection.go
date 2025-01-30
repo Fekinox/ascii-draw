@@ -9,7 +9,7 @@ type LassoTool struct {
 	mask        Grid[bool]
 }
 
-func (l *LassoTool) HandleEvent(m *MainWidget, event tcell.Event) {
+func (l *LassoTool) HandleEvent(m *Editor, event tcell.Event) {
 	switch ev := event.(type) {
 	case *tcell.EventMouse:
 		cx, cy := m.cursorX+m.sx, m.cursorY+m.sy
@@ -35,7 +35,7 @@ func (l *LassoTool) HandleEvent(m *MainWidget, event tcell.Event) {
 	}
 }
 
-func (l *LassoTool) Draw(m *MainWidget, p Painter, x, y, w, h int, lag float64) {
+func (l *LassoTool) Draw(m *Editor, p Painter, x, y, w, h int, lag float64) {
 	SetString(p, x+m.sx, y+m.sy-1, "Lasso Tool", tcell.StyleDefault)
 	if l.isLassoing {
 		j := len(l.lassoPoints) - 1
