@@ -122,6 +122,8 @@ type Editor struct {
 	currentUndoIndex int
 
 	startTime time.Time
+
+	notification *NotificationWidget
 }
 
 var (
@@ -135,6 +137,7 @@ func Init(a *App, screen tcell.Screen) *Editor {
 		brushCharacter: '#',
 		brushRadius:    1,
 		startTime:      time.Now(),
+		notification:   &NotificationWidget{},
 	}
 
 	w.ScreenResize(screen.Size())
@@ -179,6 +182,8 @@ func (m *Editor) HandleEvent(event tcell.Event) {
 			return
 		}
 	}
+
+	m.notification.HandleEvent(event)
 
 	if m.hasModalTool {
 		m.currentModalTool.HandleEvent(m, event)
@@ -566,6 +571,7 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 }
 
 func (m *Editor) Update() {
+	m.notification.Update()
 }
 
 func (m *Editor) Draw(p Painter, x, y, w, h int, lag float64) {
@@ -691,6 +697,8 @@ func (m *Editor) Draw(p Painter, x, y, w, h int, lag float64) {
 	if m.hasModalTool {
 		m.currentModalTool.Draw(m, p, x, y, w, h, lag)
 	}
+
+	m.notification.Draw(p, m.sx, m.sy, m.sw, m.sh, lag)
 }
 
 func (m *Editor) DrawStatusBar(p Painter, x, y, w, h int) {
@@ -832,7 +840,7 @@ func (m *Editor) Export(s string) {
 	defer func() {
 		m.ClearTool()
 		m.ClearModalTool()
-		m.statusLine = msg
+		m.notification.PushNotification("", msg)
 		return
 	}()
 
@@ -851,7 +859,7 @@ func (m *Editor) Import(s string) {
 	defer func() {
 		m.ClearTool()
 		m.ClearModalTool()
-		m.statusLine = msg
+		m.notification.PushNotification("", msg)
 		return
 	}()
 
@@ -878,7 +886,7 @@ func (m *Editor) Save(s string) {
 	defer func() {
 		m.ClearTool()
 		m.ClearModalTool()
-		m.statusLine = msg
+		m.notification.PushNotification("", msg)
 		return
 	}()
 
@@ -900,7 +908,7 @@ func (m *Editor) Load(s string) {
 	defer func() {
 		m.ClearTool()
 		m.ClearModalTool()
-		m.statusLine = msg
+		m.notification.PushNotification("", msg)
 		return
 	}()
 
