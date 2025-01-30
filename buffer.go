@@ -476,7 +476,9 @@ func (b *Buffer) Equal(other *Buffer) bool {
 			fg2, bg2, _ := c2.Style.Decompose()
 			sameSpace := c1.Value == ' ' && c1.Value == c2.Value && bg1 == bg2
 			sameNoSpace := c1.Value != ' ' && c1.Value == c2.Value && fg1 == fg2 && bg1 == bg2
-			if !sameSpace && !sameNoSpace {
+			sameValue := sameSpace || sameNoSpace
+			sameSelection := b.SelectionMask.MustGet(x, y) == other.SelectionMask.MustGet(x, y)
+			if !sameValue || !sameSelection {
 				return false
 			}
 		}
