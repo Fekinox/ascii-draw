@@ -2,6 +2,10 @@
 
 An ASCII art program written in Go, powered by the [tcell](https://github.com/gdamore/tcell) terminal package for rendering and input handling.
 
+![completed calendar from advent of code 2016](https://github.com/user-attachments/assets/73e3e943-8f18-46f5-b70c-1fe19d9e285f)
+*(Sample image is the completed calendar from [Advent of Code 2016](https://adventofcode.com/2016))*
+
+
 ## Features
 
 * Brush tool with a configurable brush radius size
