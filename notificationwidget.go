@@ -141,6 +141,7 @@ func (n *NotificationWidget) Draw(p Painter, x, y, w, h int, lag float64) {
 	}
 
 	BorderBox(p, bb, tcell.StyleDefault)
+	FillRegion(p, r.X, r.Y, r.Width, r.Height, ' ', tcell.StyleDefault)
 	for i, l := range n.header {
 		st := tcell.StyleDefault
 		switch n.priority {
