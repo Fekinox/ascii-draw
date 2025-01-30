@@ -98,8 +98,6 @@ type Editor struct {
 	hasModalTool     bool
 	currentModalTool Tool
 
-	statusLine string
-
 	brushCharacter byte
 	fgColor        tcell.Color
 	bgColor        tcell.Color
@@ -805,9 +803,6 @@ func (m *Editor) Draw(p Painter, x, y, w, h int, lag float64) {
 }
 
 func (m *Editor) DrawStatusBar(p Painter, x, y, w, h int) {
-	// Draw the statusline
-	SetCenteredString(p, x+w/2, y, m.statusLine, tcell.StyleDefault)
-
 	// color/char indicators
 	SetString(p, x+w-27, y, fmt.Sprintf("radius: %d", m.brushRadius), tcell.StyleDefault)
 	SetString(p, x+w-17, y, "char: ", tcell.StyleDefault)
@@ -900,14 +895,12 @@ func (m *Editor) SetTool(tool Tool) {
 	m.Rollback()
 	m.hasTool = true
 	m.currentTool = tool
-	m.statusLine = ""
 }
 
 func (m *Editor) ClearTool() {
 	m.Rollback()
 	m.hasTool = true
 	m.currentTool = &BrushTool{}
-	m.statusLine = ""
 }
 
 func (m *Editor) SetModalTool(tool Tool) {
