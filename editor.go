@@ -116,12 +116,13 @@ type Editor struct {
 	isPasting bool
 	pasteData []byte
 
-	currentFile      string
-	currentUndoIndex int
+	savedFile string
+	// Position of the currently saved editor state in the undo history
+	savedUndoIndex int
 
 	startTime time.Time
 
-	notification *NotificationWidget
+	notification NotificationHandler
 }
 
 var (
@@ -388,7 +389,7 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 									},
 									"Save to ascii-draw file and quit",
 									"save path...",
-									m.currentFile,
+									m.savedFile,
 								))
 							},
 							noString: "Quit without saving",
@@ -437,7 +438,7 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 									},
 									"Save to ascii-draw file",
 									"save path...",
-									m.currentFile,
+									m.savedFile,
 								))
 							},
 							noString: "Import file without saving current file",
@@ -490,7 +491,7 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 									},
 									"Save to ascii-draw file",
 									"save path...",
-									m.currentFile,
+									m.savedFile,
 								))
 							},
 							noString: "Load file without saving current file",
@@ -539,7 +540,7 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 									func(s string) {
 										if _, err := m.Save(s); err == nil {
 											m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
-											m.currentFile = ""
+											m.savedFile = ""
 
 											m.Reset()
 											m.ClearHistory()
@@ -549,13 +550,13 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 									},
 									"Save to ascii-draw file",
 									"save path...",
-									m.currentFile,
+									m.savedFile,
 								))
 							},
 							noString: "Create new file without saving",
 							noAction: func() {
 								m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
-								m.currentFile = ""
+								m.savedFile = ""
 
 								m.Reset()
 								m.ClearHistory()
@@ -565,7 +566,7 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 						})
 					} else {
 						m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
-						m.currentFile = ""
+						m.savedFile = ""
 
 						m.Reset()
 						m.ClearHistory()
@@ -781,7 +782,7 @@ func (m *Editor) Draw(p Painter, x, y, w, h int, lag float64) {
 	SetString(p, x+1, y+m.sh+m.sy, undoHistoryLine, tcell.StyleDefault)
 
 	// current filename
-	currentFile := m.currentFile
+	currentFile := m.savedFile
 	unsavedIndicator := ""
 	if currentFile == "" {
 		currentFile = "New File"
@@ -977,8 +978,8 @@ func (m *Editor) Import(s string) {
 
 	m.Reset()
 	m.ClearHistory()
-	m.currentFile = ""
-	m.currentUndoIndex = m.undoHistoryPos
+	m.savedFile = ""
+	m.savedUndoIndex = m.undoHistoryPos
 	m.historyChanged = false
 
 	msg = fmt.Sprintf("Successfully imported plaintext file %s", s)
@@ -1007,8 +1008,8 @@ func (m *Editor) Save(s string) (msg string, err error) {
 		err = err1
 		return
 	}
-	m.currentFile = s
-	m.currentUndoIndex = m.undoHistoryPos
+	m.savedFile = s
+	m.savedUndoIndex = m.undoHistoryPos
 	m.historyChanged = false
 
 	msg = fmt.Sprintf("Successfully saved %s", s)
@@ -1041,8 +1042,8 @@ func (m *Editor) Load(s string) {
 
 	m.Reset()
 	m.ClearHistory()
-	m.currentFile = s
-	m.currentUndoIndex = m.undoHistoryPos
+	m.savedFile = s
+	m.savedUndoIndex = m.undoHistoryPos
 	m.historyChanged = false
 
 	msg = fmt.Sprintf("Successfully loaded %s", s)
@@ -1115,7 +1116,7 @@ func (m *Editor) Commit() {
 		m.undoHistory = append(m.undoHistory, m.canvas)
 	}
 
-	if m.currentUndoIndex > m.undoHistoryPos {
+	if m.savedUndoIndex > m.undoHistoryPos {
 		m.historyChanged = true
 	}
 	m.undoHistoryPos++
@@ -1155,7 +1156,7 @@ func (m *Editor) IsPaintTool() bool {
 }
 
 func (m *Editor) HasUnsavedChanges() bool {
-	return m.historyChanged || m.undoHistoryPos != m.currentUndoIndex
+	return m.historyChanged || m.undoHistoryPos != m.savedUndoIndex
 }
 
 func (m *Editor) Reset() {
@@ -1167,7 +1168,7 @@ func (m *Editor) Reset() {
 	m.colorPickState = ColorPickNone
 	m.colorSelectState = ColorSelectNone
 	m.historyChanged = false
-	m.currentUndoIndex = 0
+	m.savedUndoIndex = 0
 	m.lockMask = 0
 }
 

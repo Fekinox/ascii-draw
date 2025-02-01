@@ -18,6 +18,11 @@ const (
 	NotificationCritical
 )
 
+type NotificationHandler interface {
+	Widget
+	PushNotification(header, body string, priority NotificationPriority)
+}
+
 type NotificationWidget struct {
 	active    bool
 	priority  NotificationPriority
