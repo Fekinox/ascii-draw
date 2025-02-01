@@ -28,7 +28,7 @@ func (b *BrushTool) HandleEvent(m *Editor, event tcell.Event) {
 			}
 			p := Position{X: cx, Y: cy}
 
-			if ev.When().Sub(b.lastPaint).Seconds() < 0.01 {
+			if ev.When().Sub(b.lastPaint).Seconds() < 0.1 {
 				dx, dy := cx-b.lastPaintPos.X, cy-b.lastPaintPos.Y
 				dist := max(max(dx, -dx), max(dy, -dy))
 				if dist > 1 {
