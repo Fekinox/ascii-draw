@@ -30,20 +30,27 @@ func (t *TextWidget) HandleEvent(event tcell.Event) {
 	switch ev := event.(type) {
 	case *tcell.EventKey:
 		switch ev.Key() {
-		case tcell.KeyBackspace2:
+		case tcell.KeyBackspace2, tcell.KeyBackspace:
 			if t.Cursor == 0 {
 				return
 			}
 			t.Cursor--
 			var sb strings.Builder
-			var i int
-			for _, r := range t.Contents {
+			for i, r := range []rune(t.Contents) {
 				if i == t.Cursor {
-					i++
 					continue
 				}
 				sb.WriteRune(r)
 				i++
+			}
+			t.Contents = sb.String()
+		case tcell.KeyDelete:
+			var sb strings.Builder
+			for i, r := range []rune(t.Contents) {
+				if i == t.Cursor {
+					continue
+				}
+				sb.WriteRune(r)
 			}
 			t.Contents = sb.String()
 		case tcell.KeyLeft:
@@ -59,13 +66,12 @@ func (t *TextWidget) HandleEvent(event tcell.Event) {
 			}
 			var sb strings.Builder
 			var done bool
-			var i int
-			for _, r := range t.Contents {
+			for i, curR := range []rune(t.Contents) {
 				if i == t.Cursor {
 					done = true
 					sb.WriteRune(r)
 				}
-				sb.WriteRune(r)
+				sb.WriteRune(curR)
 				i++
 			}
 			if !done {
