@@ -954,7 +954,6 @@ func (m *Editor) Export(s string) {
 }
 
 func (m *Editor) Import(s string) {
-	m.Stage()
 	var msg string
 	var err error
 	defer func() {
@@ -967,13 +966,14 @@ func (m *Editor) Import(s string) {
 		}
 	}()
 
-	if err1 := m.stagingCanvas.ImportFromFile(s); err1 != nil {
-		m.Rollback()
+	newCanvas := &Buffer{}
+
+	if err1 := newCanvas.ImportFromFile(s); err1 != nil {
 		err = err1
 		return
 	}
 
-	m.Commit()
+	m.canvas = newCanvas
 
 	m.Reset()
 	m.ClearHistory()
@@ -999,6 +999,10 @@ func (m *Editor) Save(s string) (msg string, err error) {
 		}
 	}()
 
+	if m.undoHistoryPos < len(m.undoHistory) && m.CurrentCanvas() == m.canvas {
+		panic(1)
+	}
+
 	if err1 := m.CurrentCanvas().SaveToFile(s); err1 != nil {
 		err = err1
 		return
@@ -1014,7 +1018,6 @@ func (m *Editor) Save(s string) (msg string, err error) {
 }
 
 func (m *Editor) Load(s string) {
-	m.Stage()
 	var msg string
 	var err error
 	defer func() {
@@ -1027,13 +1030,14 @@ func (m *Editor) Load(s string) {
 		}
 	}()
 
-	if err1 := m.stagingCanvas.LoadFromFile(s); err1 != nil {
-		m.Rollback()
+	newCanvas := &Buffer{}
+
+	if err1 := newCanvas.LoadFromFile(s); err1 != nil {
 		err = err1
 		return
 	}
 
-	m.Commit()
+	m.canvas = newCanvas
 
 	m.Reset()
 	m.ClearHistory()
