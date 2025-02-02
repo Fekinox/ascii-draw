@@ -149,6 +149,9 @@ func Init(a *App, screen tcell.Screen) *Editor {
 }
 
 func (m *Editor) HandleEvent(event tcell.Event) {
+	if ev, ok := event.(*tcell.EventKey); ok {
+		m.notification.PushNotification("", fmt.Sprintf("%v", ev.Name()), NotificationNormal)
+	}
 	// Events are handled in the following order:
 	// - If a modal tool is active, it grabs all non-critical events.
 	// - Console resize events will automatically resize the canvas and scale the offset
@@ -370,289 +373,270 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 			return true
 		}
 
+		if ev.Key() >= tcell.KeyCtrlSpace && ev.Key() <= tcell.KeyCtrlUnderscore {
+			handled := true
+			switch ev.Key() {
+			case tcell.KeyCtrlQ:
+				if ev.Modifiers()&tcell.ModAlt != 0 {
+					m.app.WillQuit = true
+					return true
+				}
+				if m.HasUnsavedChanges() {
+					m.SetModalTool(&YesNoPromptTool{
+						prompt:    "File has unsaved changes, quit?",
+						yesString: "Save changes and quit",
+						yesAction: func() {
+							m.SetModalTool(MakePromptTool(
+								func(s string) {
+									if _, err := m.Save(s); err == nil {
+										m.app.WillQuit = true
+									}
+								},
+								"Save to ascii-draw file and quit",
+								"save path...",
+								m.savedFile,
+							))
+						},
+						noString: "Quit without saving",
+						noAction: func() {
+							m.app.WillQuit = true
+						},
+					})
+				} else {
+					m.app.WillQuit = true
+				}
+			case tcell.KeyCtrlH:
+				m.SetModalTool(&HelpTool{})
+			case tcell.KeyCtrlP:
+				m.SetModalTool(MakePromptTool(
+					m.Export,
+					"Export to plaintext",
+					"export path...",
+					"",
+				))
+			case tcell.KeyCtrlI:
+				if m.HasUnsavedChanges() {
+					m.SetModalTool(&YesNoPromptTool{
+						prompt:    "File has unsaved changes, import file?",
+						yesString: "Save changes and import file",
+						yesAction: func() {
+							m.SetModalTool(MakePromptTool(
+								func(s string) {
+									if _, err := m.Save(s); err == nil {
+										m.SetModalTool(MakePromptTool(
+											m.Import,
+											"Import plaintext",
+											"import path...",
+											"",
+										))
+									}
+								},
+								"Save to ascii-draw file",
+								"save path...",
+								m.savedFile,
+							))
+						},
+						noString: "Import file without saving current file",
+						noAction: func() {
+							m.SetModalTool(MakePromptTool(
+								m.Import,
+								"Import plaintext",
+								"import path...",
+								"",
+							))
+						},
+					})
+				} else {
+					m.SetModalTool(MakePromptTool(
+						m.Import,
+						"Import plaintext",
+						"import path...",
+						"",
+					))
+				}
+			case tcell.KeyCtrlS:
+
+				m.SetModalTool(MakePromptTool(
+					func(s string) {
+						_, _ = m.Save(s)
+					},
+					"Save to ascii-draw file",
+					"save path...",
+					"",
+				))
+			case tcell.KeyCtrlL:
+				if m.HasUnsavedChanges() {
+					m.SetModalTool(&YesNoPromptTool{
+						prompt:    "File has unsaved changes, load file?",
+						yesString: "Save changes and load file",
+						yesAction: func() {
+							m.SetModalTool(MakePromptTool(
+								func(s string) {
+									if _, err := m.Save(s); err == nil {
+										m.SetModalTool(MakePromptTool(
+											m.Load,
+											"Load binary file",
+											"load path...",
+											"",
+										))
+									}
+								},
+								"Save to ascii-draw file",
+								"save path...",
+								m.savedFile,
+							))
+						},
+						noString: "Load file without saving current file",
+						noAction: func() {
+							m.SetModalTool(MakePromptTool(
+								m.Load,
+								"Load ascii-draw file",
+								"load path...",
+								"",
+							))
+						},
+					})
+				} else {
+					m.SetModalTool(MakePromptTool(
+						m.Load,
+						"Load ascii-draw file",
+						"load path...",
+						"",
+					))
+				}
+			case tcell.KeyCtrlF:
+				if m.colorSelectState != ColorSelectFg {
+					m.colorSelectState = ColorSelectFg
+				} else {
+					m.colorSelectState = ColorSelectNone
+				}
+			case tcell.KeyCtrlG:
+				if m.colorSelectState != ColorSelectBg {
+					m.colorSelectState = ColorSelectBg
+				} else {
+					m.colorSelectState = ColorSelectNone
+				}
+			case tcell.KeyCtrlN:
+				if m.HasUnsavedChanges() {
+					m.SetModalTool(&YesNoPromptTool{
+						prompt:    "File has unsaved changes, create new file?",
+						yesString: "Save changes and create new file",
+						yesAction: func() {
+							m.SetModalTool(MakePromptTool(
+								func(s string) {
+									if _, err := m.Save(s); err == nil {
+										m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
+										m.savedFile = ""
+
+										m.Reset()
+										m.ClearHistory()
+
+										m.cursorX, m.cursorY = m.sw/2, m.sh/2
+									}
+								},
+								"Save to ascii-draw file",
+								"save path...",
+								m.savedFile,
+							))
+						},
+						noString: "Create new file without saving",
+						noAction: func() {
+							m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
+							m.savedFile = ""
+
+							m.Reset()
+							m.ClearHistory()
+
+							m.cursorX, m.cursorY = m.sw/2, m.sh/2
+						},
+					})
+				} else {
+					m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
+					m.savedFile = ""
+
+					m.Reset()
+					m.ClearHistory()
+
+					m.cursorX, m.cursorY = m.sw/2, m.sh/2
+				}
+			case tcell.KeyCtrlR:
+				m.SetTool(&LassoTool{})
+			case tcell.KeyCtrlT:
+				m.SetTool(&TranslateTool{})
+			case tcell.KeyCtrlE:
+				m.SetTool(&LineTool{})
+			case tcell.KeyCtrlA:
+				m.Stage()
+				m.stagingCanvas.Deselect()
+				m.Commit()
+
+			case tcell.KeyCtrlC:
+				m.SetClipboard()
+			case tcell.KeyCtrlX:
+				m.SetClipboard()
+				m.Stage()
+				m.stagingCanvas.ClearSelection()
+				m.Commit()
+			case tcell.KeyCtrlV:
+				m.SetTool(&StampTool{})
+
+			case tcell.KeyCtrlZ:
+				if ev.Modifiers()&tcell.ModAlt == 0 {
+					m.undoHistoryPos = max(0, m.undoHistoryPos-1)
+				} else {
+					m.undoHistoryPos = min(len(m.undoHistory), m.undoHistoryPos+1)
+				}
+
+			default:
+				handled = false
+			}
+			if handled {
+				return true
+			}
+		}
+
 		if ev.Key() == tcell.KeyRune {
 			if ev.Modifiers()&tcell.ModAlt != 0 {
 				handled := true
 				switch ev.Rune() {
-				// Quit
-				case 'q':
-					if m.HasUnsavedChanges() {
-						m.SetModalTool(&YesNoPromptTool{
-							prompt:    "File has unsaved changes, quit?",
-							yesString: "Save changes and quit",
-							yesAction: func() {
-								m.SetModalTool(MakePromptTool(
-									func(s string) {
-										if _, err := m.Save(s); err == nil {
-											m.app.WillQuit = true
-										}
-									},
-									"Save to ascii-draw file and quit",
-									"save path...",
-									m.savedFile,
-								))
-							},
-							noString: "Quit without saving",
-							noAction: func() {
-								m.app.WillQuit = true
-							},
-						})
-					} else {
-						m.app.WillQuit = true
-					}
-
-				// Quit without saving
-				case 'Q':
-					m.app.WillQuit = true
-
-				// Show help page
-				case 'h':
-					m.SetModalTool(&HelpTool{})
-
-				// Export to text
-				case 'p':
-					m.SetModalTool(MakePromptTool(
-						m.Export,
-						"Export to plaintext",
-						"export path...",
-						"",
-					))
-
-				// Import from text
-				case 'i':
-					if m.HasUnsavedChanges() {
-						m.SetModalTool(&YesNoPromptTool{
-							prompt:    "File has unsaved changes, import file?",
-							yesString: "Save changes and import file",
-							yesAction: func() {
-								m.SetModalTool(MakePromptTool(
-									func(s string) {
-										if _, err := m.Save(s); err == nil {
-											m.SetModalTool(MakePromptTool(
-												m.Import,
-												"Import plaintext",
-												"import path...",
-												"",
-											))
-										}
-									},
-									"Save to ascii-draw file",
-									"save path...",
-									m.savedFile,
-								))
-							},
-							noString: "Import file without saving current file",
-							noAction: func() {
-								m.SetModalTool(MakePromptTool(
-									m.Import,
-									"Import plaintext",
-									"import path...",
-									"",
-								))
-							},
-						})
-					} else {
-						m.SetModalTool(MakePromptTool(
-							m.Import,
-							"Import plaintext",
-							"import path...",
-							"",
-						))
-					}
-
-				// Save to binary
-				case 's':
-					m.SetModalTool(MakePromptTool(
-						func(s string) {
-							_, _ = m.Save(s)
-						},
-						"Save to ascii-draw file",
-						"save path...",
-						"",
-					))
-
-				// Load from binary
-				case 'l':
-					if m.HasUnsavedChanges() {
-						m.SetModalTool(&YesNoPromptTool{
-							prompt:    "File has unsaved changes, load file?",
-							yesString: "Save changes and load file",
-							yesAction: func() {
-								m.SetModalTool(MakePromptTool(
-									func(s string) {
-										if _, err := m.Save(s); err == nil {
-											m.SetModalTool(MakePromptTool(
-												m.Load,
-												"Load binary file",
-												"load path...",
-												"",
-											))
-										}
-									},
-									"Save to ascii-draw file",
-									"save path...",
-									m.savedFile,
-								))
-							},
-							noString: "Load file without saving current file",
-							noAction: func() {
-								m.SetModalTool(MakePromptTool(
-									m.Load,
-									"Load ascii-draw file",
-									"load path...",
-									"",
-								))
-							},
-						})
-					} else {
-						m.SetModalTool(MakePromptTool(
-							m.Load,
-							"Load ascii-draw file",
-							"load path...",
-							"",
-						))
-					}
-
-				// Select foreground color
-				case 'f':
-					if m.colorSelectState != ColorSelectFg {
-						m.colorSelectState = ColorSelectFg
-					} else {
-						m.colorSelectState = ColorSelectNone
-					}
-
-				// Select background color
-				case 'g':
-					if m.colorSelectState != ColorSelectBg {
-						m.colorSelectState = ColorSelectBg
-					} else {
-						m.colorSelectState = ColorSelectNone
-					}
-
-				// Clear canvas
-				case 'n':
-					if m.HasUnsavedChanges() {
-						m.SetModalTool(&YesNoPromptTool{
-							prompt:    "File has unsaved changes, create new file?",
-							yesString: "Save changes and create new file",
-							yesAction: func() {
-								m.SetModalTool(MakePromptTool(
-									func(s string) {
-										if _, err := m.Save(s); err == nil {
-											m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
-											m.savedFile = ""
-
-											m.Reset()
-											m.ClearHistory()
-
-											m.cursorX, m.cursorY = m.sw/2, m.sh/2
-										}
-									},
-									"Save to ascii-draw file",
-									"save path...",
-									m.savedFile,
-								))
-							},
-							noString: "Create new file without saving",
-							noAction: func() {
-								m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
-								m.savedFile = ""
-
-								m.Reset()
-								m.ClearHistory()
-
-								m.cursorX, m.cursorY = m.sw/2, m.sh/2
-							},
-						})
-					} else {
-						m.canvas = MakeBuffer(INIT_WIDTH, INIT_HEIGHT)
-						m.savedFile = ""
-
-						m.Reset()
-						m.ClearHistory()
-
-						m.cursorX, m.cursorY = m.sw/2, m.sh/2
-					}
-
-				// Begin lasso selection
-				case 'r':
-					m.SetTool(&LassoTool{})
-
-				// Start translating
-				case 't':
-					m.SetTool(&TranslateTool{})
-
-				// Enter line tool
-				case 'e':
-					m.SetTool(&LineTool{})
-
-				// Deselect
-				case 'a':
-					m.Stage()
-					m.stagingCanvas.Deselect()
-					m.Commit()
-
-				// Copy
-				case 'c':
-					m.SetClipboard()
-
-				// Cut
-				case 'x':
-					m.SetClipboard()
-					m.Stage()
-					m.stagingCanvas.ClearSelection()
-					m.Commit()
-
-				// Paste
-				case 'v':
-					m.SetTool(&StampTool{})
-
 				// Increase brush radius
 				case '=':
 					m.brushRadius = min(MAX_BRUSH_RADIUS, m.brushRadius+1)
 
-				// Decrease brush radius
+					// Decrease brush radius
 				case '-':
 					m.brushRadius = max(1, m.brushRadius-1)
 
-				// Undo
-				case 'z':
-					m.undoHistoryPos = max(0, m.undoHistoryPos-1)
-
-				// Redo
-				case 'Z':
-					m.undoHistoryPos = min(len(m.undoHistory), m.undoHistoryPos+1)
-
-				// Resize
+					// Resize
 				case '[':
 					t := &ResizeTool{}
 					t.SetDimsFromSelection(m.CurrentCanvas())
 					t.InitHandles()
 					m.SetTool(t)
 
-				// Toggle alpha lock
+					// Toggle alpha lock
 				case '1':
 					m.lockMask ^= LockMaskAlpha
 
-				// Toggle character lock
+					// Toggle character lock
 				case '2':
 					m.lockMask ^= LockMaskChar
 
-				// Toggle foreground color lock
+					// Toggle foreground color lock
 				case '3':
 					m.lockMask ^= LockMaskFg
 
-				// Toggle background color lock
+					// Toggle background color lock
 				case '4':
 					m.lockMask ^= LockMaskBg
 
-				// Clear selection
+					// Clear selection
 				case ',':
 					m.Stage()
 					m.stagingCanvas.ClearSelection()
 					m.Commit()
 
-				// Fill selection with current brush
+					// Fill selection with current brush
 				case '.':
 					m.Stage()
 					c := Cell{
@@ -661,11 +645,12 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 					}
 					m.stagingCanvas.FillSelection(c, m.lockMask)
 					m.Commit()
-
 				default:
 					handled = false
 				}
-				return handled
+				if handled {
+					return true
+				}
 			}
 		}
 	}
@@ -728,7 +713,12 @@ func (m *Editor) Draw(p Painter, x, y, w, h int, lag float64) {
 			for x := range cc.Data.Width {
 				dt := math.Cos(t*10 - math.Abs(float64(x-(cx-m.sx-canvasOffX)))*1)
 				if dt > 0 {
-					p.SetByte(m.sx+m.offsetX+x, cy, '.', tcell.StyleDefault.Foreground(tcell.ColorWhite))
+					p.SetByte(
+						m.sx+m.offsetX+x,
+						cy,
+						'.',
+						tcell.StyleDefault.Foreground(tcell.ColorWhite),
+					)
 				}
 			}
 		}
@@ -737,7 +727,12 @@ func (m *Editor) Draw(p Painter, x, y, w, h int, lag float64) {
 			for y := range cc.Data.Height {
 				dt := math.Cos(t*6 - math.Abs(float64(y-(cy-m.sy-canvasOffY)))*2)
 				if dt > 0 {
-					p.SetByte(cx, m.sy+m.offsetY+y, '.', tcell.StyleDefault.Foreground(tcell.ColorWhite))
+					p.SetByte(
+						cx,
+						m.sy+m.offsetY+y,
+						'.',
+						tcell.StyleDefault.Foreground(tcell.ColorWhite),
+					)
 				}
 			}
 		}
@@ -793,7 +788,13 @@ func (m *Editor) Draw(p Painter, x, y, w, h int, lag float64) {
 
 	fileString := fmt.Sprintf("%s%s", unsavedIndicator, currentFile)
 
-	SetString(p, x+m.sw-Condition.StringWidth(fileString)+m.sx, y+m.sh+m.sy, fileString, tcell.StyleDefault)
+	SetString(
+		p,
+		x+m.sw-Condition.StringWidth(fileString)+m.sx,
+		y+m.sh+m.sy,
+		fileString,
+		tcell.StyleDefault,
+	)
 
 	// modal tool
 	if m.hasModalTool {
