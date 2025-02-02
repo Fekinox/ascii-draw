@@ -36,7 +36,7 @@ var helpPages [][][]string = [][][]string{
 			"alt+4: toggle bg lock",
 			"ctrl+s: save to file",
 			"ctrl+l: load to file",
-			"ctrl+i: import text",
+			"ctrl+o: import text",
 			"ctrl+p: export text",
 			"ctrl+z: undo",
 			"ctrl+alt+z: redo",

@@ -152,6 +152,9 @@ func (m *Editor) HandleEvent(event tcell.Event) {
 	if ev, ok := event.(*tcell.EventKey); ok {
 		m.notification.PushNotification("", fmt.Sprintf("%v", ev.Name()), NotificationNormal)
 	}
+	if ev, ok := event.(*tcell.EventMouse); ok {
+		m.notification.PushNotification("", fmt.Sprintf("%v", ev), NotificationNormal)
+	}
 	// Events are handled in the following order:
 	// - If a modal tool is active, it grabs all non-critical events.
 	// - Console resize events will automatically resize the canvas and scale the offset
@@ -414,7 +417,7 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 					"export path...",
 					"",
 				))
-			case tcell.KeyCtrlI:
+			case tcell.KeyCtrlO:
 				if m.HasUnsavedChanges() {
 					m.SetModalTool(&YesNoPromptTool{
 						prompt:    "File has unsaved changes, import file?",
