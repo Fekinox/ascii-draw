@@ -123,6 +123,8 @@ type Editor struct {
 	startTime time.Time
 
 	notification NotificationHandler
+
+	keymap map[KeyEvent]func()
 }
 
 var (
