@@ -1,5 +1,4 @@
 testfiles
 .format
 logfile
-.build.sh
 build/

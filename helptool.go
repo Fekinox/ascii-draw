@@ -96,7 +96,7 @@ func (e *HelpTool) Draw(m *Editor, p Painter, x, y, w, h int, lag float64) {
 	BorderBox(p, bb, tcell.StyleDefault)
 	FillRegion(p, r.X, r.Y, r.Width, r.Height, ' ', tcell.StyleDefault)
 
-	SetCenteredString(p, r.X+r.Width/2, r.Y, "ascii-draw v0.1.0", tcell.StyleDefault)
+	SetCenteredString(p, r.X+r.Width/2, r.Y, ProgramName(), tcell.StyleDefault)
 	SetCenteredString(p, r.X+r.Width/2, r.Y+r.Height, "press tab for next page", tcell.StyleDefault)
 
 	for y, ln := range helpPages[e.currentPage][0] {
