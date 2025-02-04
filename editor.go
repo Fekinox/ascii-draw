@@ -14,6 +14,8 @@ const MAX_BRUSH_RADIUS int = 99
 const INIT_WIDTH = 80
 const INIT_HEIGHT = 24
 
+const EVENT_MONITORING = false
+
 type ColorPickState int
 
 const (
@@ -195,11 +197,13 @@ func defaultKeymap() map[KeyEvent]action.Action {
 }
 
 func (m *Editor) HandleEvent(event tcell.Event) {
-	if ev, ok := event.(*tcell.EventKey); ok {
-		m.notification.PushNotification("", fmt.Sprintf("%v", ev.Name()), NotificationNormal)
-	}
-	if ev, ok := event.(*tcell.EventMouse); ok {
-		m.notification.PushNotification("", fmt.Sprintf("%v", ev), NotificationNormal)
+	if EVENT_MONITORING {
+		if ev, ok := event.(*tcell.EventKey); ok {
+			m.notification.PushNotification("", fmt.Sprintf("%v", ev.Name()), NotificationNormal)
+		}
+		if ev, ok := event.(*tcell.EventMouse); ok {
+			m.notification.PushNotification("", fmt.Sprintf("%v", ev), NotificationNormal)
+		}
 	}
 	// Events are handled in the following order:
 	// - If a modal tool is active, it grabs all non-critical events.
@@ -411,7 +415,6 @@ func (m *Editor) HandleColorSelect(event tcell.Event) bool {
 func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 	switch ev := event.(type) {
 	case *tcell.EventKey:
-		m.notification.PushNotification("", fmt.Sprintf("%v", ParseEvent(ev)), NotificationNormal)
 		if act, ok := m.keymap[ParseEvent(ev)]; ok {
 			switch act {
 			case action.CenterCanvas:
