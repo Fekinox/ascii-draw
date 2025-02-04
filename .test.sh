@@ -2,6 +2,6 @@
 
 ./.build.sh
 
-chmod +x build/ascii-draw_linux
+chmod +x build/linux-amd64/ascii-draw
 
-exec build/ascii-draw_linux
+exec build/linux-amd64/ascii-draw
