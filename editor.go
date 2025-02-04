@@ -174,10 +174,12 @@ func defaultKeymap() map[KeyEvent]action.Action {
 		{Key: tcell.KeyCtrlT}: action.Translate,
 		{Key: tcell.KeyCtrlE}: action.Line,
 
-		{Key: tcell.KeyCtrlA}: action.Deselect,
-		{Key: tcell.KeyCtrlC}: action.Copy,
-		{Key: tcell.KeyCtrlX}: action.Cut,
-		{Key: tcell.KeyCtrlV}: action.Paste,
+		{Key: tcell.KeyCtrlA}:        action.Deselect,
+		{Key: tcell.KeyCtrlC}:        action.Copy,
+		{Key: tcell.KeyCtrlX}:        action.Cut,
+		{Key: tcell.KeyCtrlV}:        action.Paste,
+		RuneEvent(',', tcell.ModAlt): action.ClearSelection,
+		RuneEvent('.', tcell.ModAlt): action.FillSelection,
 
 		{Key: tcell.KeyCtrlZ}: action.Undo,
 		{Key: tcell.KeyCtrlY}: action.Redo,
@@ -186,13 +188,12 @@ func defaultKeymap() map[KeyEvent]action.Action {
 
 		RuneEvent('=', tcell.ModAlt): action.IncreaseBrushRadius,
 		RuneEvent('-', tcell.ModAlt): action.DecreaseBrushRadius,
-		RuneEvent('[', tcell.ModAlt): action.Resize,
 		RuneEvent('1', tcell.ModAlt): action.AlphaLock,
 		RuneEvent('2', tcell.ModAlt): action.CharLock,
 		RuneEvent('3', tcell.ModAlt): action.FgLock,
 		RuneEvent('4', tcell.ModAlt): action.BgLock,
-		RuneEvent(',', tcell.ModAlt): action.ClearSelection,
-		RuneEvent('.', tcell.ModAlt): action.FillSelection,
+
+		RuneEvent('[', tcell.ModAlt): action.Resize,
 	}
 }
 
@@ -205,6 +206,7 @@ func (m *Editor) HandleEvent(event tcell.Event) {
 			m.notification.PushNotification("", fmt.Sprintf("%v", ev), NotificationNormal)
 		}
 	}
+
 	// Events are handled in the following order:
 	// - If a modal tool is active, it grabs all non-critical events.
 	// - Console resize events will automatically resize the canvas and scale the offset
