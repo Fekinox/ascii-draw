@@ -44,24 +44,24 @@ and input handling.
 |-----------------|--------------------------------------------------------------------------------------------------------------------|
 | Any key         | Set the current brush character                                                                                    |
 | Esc             | Return to brush tool                                                                                               |
-| Alt+h           | Show help page                                                                                                     |
-| Alt+q           | Quit                                                                                                               |
-| Alt+Shift+q     | Quit without saving changes                                                                                        |
-| Alt+f           | Select foreground color                                                                                            |
-| Alt+g           | Select background color                                                                                            |
+| Ctrl+h          | Show help page                                                                                                     |
+| Ctrl+q          | Quit                                                                                                               |
+| Ctrl+Alt+q      | Quit without saving changes                                                                                        |
+| Ctrl+f          | Select foreground color                                                                                            |
+| Ctrl+g          | Select background color                                                                                            |
 | Alt+=           | Increase brush radius                                                                                              |
 | Alt+-           | Decrease brush radius                                                                                              |
 | Alt+mouse hover | Look up character and colors on canvas                                                                             |
 | Alt+click       | Grab character from canvas                                                                                         |
 | Alt+drag up     | Grab foreground color                                                                                              |
 | Alt+drag down   | Grab background color                                                                                              |
-| Alt+z           | Undo                                                                                                               |
-| Alt+Shift+z     | Redo                                                                                                               |
-| Alt+c           | Copy selection                                                                                                     |
-| Alt+x           | Cut selection                                                                                                      |
-| Alt+v           | Paste selection                                                                                                    |
+| Ctrl+z          | Undo                                                                                                               |
+| Ctrl+y          | Redo                                                                                                               |
+| Ctrl+c          | Copy selection                                                                                                     |
+| Ctrl+x          | Cut selection                                                                                                      |
+| Ctrl+v          | Paste selection                                                                                                    |
 | Ctrl+Shift+v    | Paste clipboard                                                                                                    |
-| Alt+a           | Reset selection                                                                                                    |
+| Ctrl+a          | Reset selection                                                                                                    |
 | Alt+,           | Clear selection                                                                                                    |
 | Alt+.           | Fill selection                                                                                                     |
 | Alt+1           | Toggle alpha lock: drawing commands do not modify empty characters (space ` ` characters with no background color) |
@@ -69,22 +69,22 @@ and input handling.
 | Alt+3           | Toggle foreground lock: drawing commands do not change the foreground color of a cell.                             |
 | Alt+4           | Toggle background lock: drawing commands do not change the background color of a cell.                             |
 
-| Key   | Command               |
-|-------|-----------------------|
-| Alt+s | Save to binary file   |
-| Alt+l | Load from binary file |
-| Alt+i | Import plain text     |
-| Alt+p | Export plain text     |
+| Key    | Command               |
+|--------|-----------------------|
+| Ctrl+s | Save to binary file   |
+| Ctrl+o | Load from binary file |
+| Ctrl+i | Import plain text     |
+| Ctrl+p | Export plain text     |
 
 | Key                                       | Command                     |
 |-------------------------------------------|-----------------------------|
 | Esc                                       | Enter brush tool            |
 | (Brush) Click and drag                    | Draw on canvas              |
-| Alt+e                                     | Enter line tool             |
+| Ctrl+e                                    | Enter line tool             |
 | (Line) Click and drag                     | Draw a straight line        |
-| Alt+r                                     | Enter lasso tool            |
+| Ctrl+r                                    | Enter lasso tool            |
 | (Lasso) Click and drag                    | Create a freeform selection |
-| Alt+t                                     | Enter translate tool        |
+| Ctrl+t                                    | Enter translate tool        |
 | (Translate) Click and drag                | Move selected characters    |
 | Alt+\[                                    | Enter resize tool           |
 | (Resize) Click and drag outside of region | Set new resize rectangle    |
@@ -99,12 +99,9 @@ program has the following limitations:
 
 - The only characters permitted are the graphical 7-bit ASCII
   characters. These are the 95 characters from 0x20 (` `) to 0x7E (`~`)
-  inclusive.
-        ! " # $ % & ' ( ) * + , - . / 0 1 2
-      3 4 5 6 7 8 9 : ; < = > ? @ A B C D E
-      F G H I J K L M N O P Q R S T U V W X
-      Y Z [ \ ] ^ _ ` a b c d e f g h i j k
-      l m n o p q r s t u v w x y z { | } ~
+  inclusive. ! " \# \$ % & ' ( ) \* + , - . / 0 1 2 3 4 5 6 7 8 9 : ; \<
+  = \> ? @ A B C D E F G H I J K L M N O P Q R S T U V W X Y Z \[ \\ \]
+  ^ \_ \` a b c d e f g h i j k l m n o p q r s t u v w x y z { \| } ~
 - The only permissible foreground and background colors are the ANSI
   4-bit colors (black, red, green, yellow, blue, magenta, cyan, white,
   plus their bright variants) and a blank color which represents the
