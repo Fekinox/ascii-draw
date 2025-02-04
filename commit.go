@@ -9,6 +9,6 @@ func ProgramName() string {
 	if Branch != "main" {
 		return fmt.Sprintf("ascii-draw %s (%s)", Version, Branch)
 	} else {
-		return fmt.Sprintf("ascii-draw %s", Version, Branch)
+		return fmt.Sprintf("ascii-draw %s", Version)
 	}
 }

@@ -1,9 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"runtime/debug"
-
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -15,9 +12,6 @@ var (
 )
 
 func main() {
-	if info, ok := debug.ReadBuildInfo(); ok {
-		fmt.Println(info.Settings)
-	}
 	a := NewApp()
 	defer a.Quit()
 	a.Loop()
