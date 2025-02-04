@@ -164,7 +164,7 @@ func defaultKeymap() map[KeyEvent]action.Action {
 		{Key: tcell.KeyCtrlS}: action.Save,
 		{Key: tcell.KeyCtrlO}: action.Load,
 		{Key: tcell.KeyCtrlP}: action.Export,
-		{Key: tcell.KeyCtrlI}: action.Import,
+		{Key: tcell.KeyCtrlU}: action.Import,
 		{Key: tcell.KeyCtrlN}: action.NewCanvas,
 
 		{Key: tcell.KeyCtrlF}: action.FgColorSelector,
@@ -172,7 +172,6 @@ func defaultKeymap() map[KeyEvent]action.Action {
 
 		{Key: tcell.KeyCtrlR}: action.Lasso,
 		{Key: tcell.KeyCtrlT}: action.Translate,
-		{Key: tcell.KeyCtrlE}: action.Line,
 
 		{Key: tcell.KeyCtrlA}:        action.Deselect,
 		{Key: tcell.KeyCtrlC}:        action.Copy,
@@ -623,9 +622,6 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 
 			case action.Translate:
 				m.SetTool(&TranslateTool{})
-
-			case action.Line:
-				m.SetTool(&LineTool{})
 
 			case action.Deselect:
 				m.Stage()
@@ -1193,9 +1189,6 @@ func (m *Editor) CurrentCanvas() *Buffer {
 
 func (m *Editor) IsPaintTool() bool {
 	if _, ok := m.currentTool.(*BrushTool); ok {
-		return true
-	}
-	if _, ok := m.currentTool.(*LineTool); ok {
 		return true
 	}
 	return false

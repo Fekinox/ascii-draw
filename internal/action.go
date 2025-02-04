@@ -17,7 +17,6 @@ const (
 	BgColorSelector
 	Lasso
 	Translate
-	Line
 	Deselect
 	Copy
 	Cut

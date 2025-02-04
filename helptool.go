@@ -52,9 +52,7 @@ var helpPages [][][]string = [][][]string{
 		{
 			"brush (default tool)",
 			"click and drag",
-			"",
-			"line (ctrl+e)",
-			"click and drag for straight lines",
+			"tab to toggle straight line mode",
 			"",
 			"lasso (ctrl+r)",
 			"click and drag to make freeform selection",
