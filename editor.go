@@ -460,55 +460,6 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 			case action.Help:
 				m.SetModalTool(&HelpTool{})
 
-			case action.Export:
-				m.SetModalTool(MakePromptTool(
-					m.Export,
-					"Export to plaintext",
-					"export path...",
-					"",
-				))
-
-			case action.Import:
-				if m.HasUnsavedChanges() {
-					m.SetModalTool(&YesNoPromptTool{
-						prompt:    "File has unsaved changes, import file?",
-						yesString: "Save changes and import file",
-						yesAction: func() {
-							m.SetModalTool(MakePromptTool(
-								func(s string) {
-									if _, err := m.Save(s); err == nil {
-										m.SetModalTool(MakePromptTool(
-											m.Import,
-											"Import plaintext",
-											"import path...",
-											"",
-										))
-									}
-								},
-								"Save to ascii-draw file",
-								"save path...",
-								m.savedFile,
-							))
-						},
-						noString: "Import file without saving current file",
-						noAction: func() {
-							m.SetModalTool(MakePromptTool(
-								m.Import,
-								"Import plaintext",
-								"import path...",
-								"",
-							))
-						},
-					})
-				} else {
-					m.SetModalTool(MakePromptTool(
-						m.Import,
-						"Import plaintext",
-						"import path...",
-						"",
-					))
-				}
-
 			case action.Save:
 				m.SetModalTool(MakePromptTool(
 					func(s string) {
@@ -556,6 +507,55 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 						m.Load,
 						"Load ascii-draw file",
 						"load path...",
+						"",
+					))
+				}
+
+			case action.Export:
+				m.SetModalTool(MakePromptTool(
+					m.Export,
+					"Export to plaintext",
+					"export path...",
+					"",
+				))
+
+			case action.Import:
+				if m.HasUnsavedChanges() {
+					m.SetModalTool(&YesNoPromptTool{
+						prompt:    "File has unsaved changes, import file?",
+						yesString: "Save changes and import file",
+						yesAction: func() {
+							m.SetModalTool(MakePromptTool(
+								func(s string) {
+									if _, err := m.Save(s); err == nil {
+										m.SetModalTool(MakePromptTool(
+											m.Import,
+											"Import plaintext",
+											"import path...",
+											"",
+										))
+									}
+								},
+								"Save to ascii-draw file",
+								"save path...",
+								m.savedFile,
+							))
+						},
+						noString: "Import file without saving current file",
+						noAction: func() {
+							m.SetModalTool(MakePromptTool(
+								m.Import,
+								"Import plaintext",
+								"import path...",
+								"",
+							))
+						},
+					})
+				} else {
+					m.SetModalTool(MakePromptTool(
+						m.Import,
+						"Import plaintext",
+						"import path...",
 						"",
 					))
 				}
@@ -646,6 +646,7 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 
 			case action.Undo:
 				m.undoHistoryPos = max(0, m.undoHistoryPos-1)
+
 			case action.Redo:
 				m.undoHistoryPos = min(len(m.undoHistory), m.undoHistoryPos+1)
 
