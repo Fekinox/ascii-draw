@@ -6,6 +6,7 @@ import (
 	"time"
 	"unicode"
 
+	action "github.com/Fekinox/ascii-draw/internal"
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -124,7 +125,7 @@ type Editor struct {
 
 	notification NotificationHandler
 
-	keymap map[KeyEvent]func()
+	keymap map[KeyEvent]action.Action
 }
 
 var (
@@ -139,6 +140,7 @@ func Init(a *App, screen tcell.Screen) *Editor {
 		brushRadius:    1,
 		startTime:      time.Now(),
 		notification:   &NotificationWidget{},
+		keymap:         defaultKeymap(),
 	}
 
 	w.ScreenResize(screen.Size())
@@ -148,6 +150,48 @@ func Init(a *App, screen tcell.Screen) *Editor {
 	w.cursorX, w.cursorY = w.sw/2, w.sh/2
 	a.Logger.Println("Successfully initialized program")
 	return w
+}
+
+func defaultKeymap() map[KeyEvent]action.Action {
+	return map[KeyEvent]action.Action{
+		{Key: tcell.KeyCtrlQ}: action.Quit,
+		{Key: tcell.KeyCtrlQ,
+			Modifiers: tcell.ModAlt}: action.ForceQuit,
+		{Key: tcell.KeyCtrlH}: action.Help,
+
+		{Key: tcell.KeyCtrlS}: action.Save,
+		{Key: tcell.KeyCtrlO}: action.Load,
+		{Key: tcell.KeyCtrlP}: action.Export,
+		{Key: tcell.KeyCtrlI}: action.Import,
+		{Key: tcell.KeyCtrlN}: action.NewCanvas,
+
+		{Key: tcell.KeyCtrlF}: action.FgColorSelector,
+		{Key: tcell.KeyCtrlG}: action.BgColorSelector,
+
+		{Key: tcell.KeyCtrlR}: action.Lasso,
+		{Key: tcell.KeyCtrlT}: action.Translate,
+		{Key: tcell.KeyCtrlE}: action.Line,
+
+		{Key: tcell.KeyCtrlA}: action.Deselect,
+		{Key: tcell.KeyCtrlC}: action.Copy,
+		{Key: tcell.KeyCtrlX}: action.Cut,
+		{Key: tcell.KeyCtrlV}: action.Paste,
+
+		{Key: tcell.KeyCtrlZ}: action.Undo,
+		{Key: tcell.KeyCtrlY}: action.Redo,
+		{Key: tcell.KeyF1,
+			Modifiers: tcell.ModAlt}: action.CenterCanvas,
+
+		RuneEvent('=', tcell.ModAlt): action.IncreaseBrushRadius,
+		RuneEvent('-', tcell.ModAlt): action.DecreaseBrushRadius,
+		RuneEvent('[', tcell.ModAlt): action.Resize,
+		RuneEvent('1', tcell.ModAlt): action.AlphaLock,
+		RuneEvent('2', tcell.ModAlt): action.CharLock,
+		RuneEvent('3', tcell.ModAlt): action.FgLock,
+		RuneEvent('4', tcell.ModAlt): action.BgLock,
+		RuneEvent(',', tcell.ModAlt): action.ClearSelection,
+		RuneEvent('.', tcell.ModAlt): action.FillSelection,
+	}
 }
 
 func (m *Editor) HandleEvent(event tcell.Event) {
@@ -367,25 +411,22 @@ func (m *Editor) HandleColorSelect(event tcell.Event) bool {
 func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 	switch ev := event.(type) {
 	case *tcell.EventKey:
-		if ev.Modifiers()&tcell.ModAlt != 0 && ev.Key() == tcell.KeyF1 {
-			if m.isPan {
-				m.offsetX += m.cursorX - m.panOriginX
-				m.offsetY += m.cursorY - m.panOriginY
-				m.panOriginX = m.cursorX
-				m.panOriginY = m.cursorY
-			}
-			m.CenterCanvas()
-			return true
-		}
-
-		if ev.Key() >= tcell.KeyCtrlSpace && ev.Key() <= tcell.KeyCtrlUnderscore {
-			handled := true
-			switch ev.Key() {
-			case tcell.KeyCtrlQ:
-				if ev.Modifiers()&tcell.ModAlt != 0 {
-					m.app.WillQuit = true
-					return true
+		m.notification.PushNotification("", fmt.Sprintf("%v", ParseEvent(ev)), NotificationNormal)
+		if act, ok := m.keymap[ParseEvent(ev)]; ok {
+			switch act {
+			case action.CenterCanvas:
+				if m.isPan {
+					m.offsetX += m.cursorX - m.panOriginX
+					m.offsetY += m.cursorY - m.panOriginY
+					m.panOriginX = m.cursorX
+					m.panOriginY = m.cursorY
 				}
+				m.CenterCanvas()
+
+			case action.ForceQuit:
+				m.app.WillQuit = true
+
+			case action.Quit:
 				if m.HasUnsavedChanges() {
 					m.SetModalTool(&YesNoPromptTool{
 						prompt:    "File has unsaved changes, quit?",
@@ -410,16 +451,19 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 				} else {
 					m.app.WillQuit = true
 				}
-			case tcell.KeyCtrlH:
+
+			case action.Help:
 				m.SetModalTool(&HelpTool{})
-			case tcell.KeyCtrlP:
+
+			case action.Export:
 				m.SetModalTool(MakePromptTool(
 					m.Export,
 					"Export to plaintext",
 					"export path...",
 					"",
 				))
-			case tcell.KeyCtrlO:
+
+			case action.Import:
 				if m.HasUnsavedChanges() {
 					m.SetModalTool(&YesNoPromptTool{
 						prompt:    "File has unsaved changes, import file?",
@@ -459,8 +503,8 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 						"",
 					))
 				}
-			case tcell.KeyCtrlS:
 
+			case action.Save:
 				m.SetModalTool(MakePromptTool(
 					func(s string) {
 						_, _ = m.Save(s)
@@ -469,7 +513,8 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 					"save path...",
 					"",
 				))
-			case tcell.KeyCtrlL:
+
+			case action.Load:
 				if m.HasUnsavedChanges() {
 					m.SetModalTool(&YesNoPromptTool{
 						prompt:    "File has unsaved changes, load file?",
@@ -509,19 +554,22 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 						"",
 					))
 				}
-			case tcell.KeyCtrlF:
+
+			case action.FgColorSelector:
 				if m.colorSelectState != ColorSelectFg {
 					m.colorSelectState = ColorSelectFg
 				} else {
 					m.colorSelectState = ColorSelectNone
 				}
-			case tcell.KeyCtrlG:
+
+			case action.BgColorSelector:
 				if m.colorSelectState != ColorSelectBg {
 					m.colorSelectState = ColorSelectBg
 				} else {
 					m.colorSelectState = ColorSelectNone
 				}
-			case tcell.KeyCtrlN:
+
+			case action.NewCanvas:
 				if m.HasUnsavedChanges() {
 					m.SetModalTool(&YesNoPromptTool{
 						prompt:    "File has unsaved changes, create new file?",
@@ -564,99 +612,85 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 
 					m.cursorX, m.cursorY = m.sw/2, m.sh/2
 				}
-			case tcell.KeyCtrlR:
+
+			case action.Lasso:
 				m.SetTool(&LassoTool{})
-			case tcell.KeyCtrlT:
+
+			case action.Translate:
 				m.SetTool(&TranslateTool{})
-			case tcell.KeyCtrlE:
+
+			case action.Line:
 				m.SetTool(&LineTool{})
-			case tcell.KeyCtrlA:
+
+			case action.Deselect:
 				m.Stage()
 				m.stagingCanvas.Deselect()
 				m.Commit()
 
-			case tcell.KeyCtrlC:
+			case action.Copy:
 				m.SetClipboard()
-			case tcell.KeyCtrlX:
+
+			case action.Cut:
 				m.SetClipboard()
 				m.Stage()
 				m.stagingCanvas.ClearSelection()
 				m.Commit()
-			case tcell.KeyCtrlV:
+
+			case action.Paste:
 				m.SetTool(&StampTool{})
 
-			case tcell.KeyCtrlZ:
-				if ev.Modifiers()&tcell.ModAlt == 0 {
-					m.undoHistoryPos = max(0, m.undoHistoryPos-1)
-				} else {
-					m.undoHistoryPos = min(len(m.undoHistory), m.undoHistoryPos+1)
+			case action.Undo:
+				m.undoHistoryPos = max(0, m.undoHistoryPos-1)
+			case action.Redo:
+				m.undoHistoryPos = min(len(m.undoHistory), m.undoHistoryPos+1)
+
+			case action.IncreaseBrushRadius:
+				m.brushRadius = min(MAX_BRUSH_RADIUS, m.brushRadius+1)
+
+				// Decrease brush radius
+			case action.DecreaseBrushRadius:
+				m.brushRadius = max(1, m.brushRadius-1)
+
+				// Resize
+			case action.Resize:
+				t := &ResizeTool{}
+				t.SetDimsFromSelection(m.CurrentCanvas())
+				t.InitHandles()
+				m.SetTool(t)
+
+				// Toggle alpha lock
+			case action.AlphaLock:
+				m.lockMask ^= LockMaskAlpha
+
+				// Toggle character lock
+			case action.CharLock:
+				m.lockMask ^= LockMaskChar
+
+				// Toggle foreground color lock
+			case action.FgLock:
+				m.lockMask ^= LockMaskFg
+
+				// Toggle background color lock
+			case action.BgLock:
+				m.lockMask ^= LockMaskBg
+
+				// Clear selection
+			case action.ClearSelection:
+				m.Stage()
+				m.stagingCanvas.ClearSelection()
+				m.Commit()
+
+				// Fill selection with current brush
+			case action.FillSelection:
+				m.Stage()
+				c := Cell{
+					Value: m.brushCharacter,
+					Style: tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
 				}
-
-			default:
-				handled = false
+				m.stagingCanvas.FillSelection(c, m.lockMask)
+				m.Commit()
 			}
-			if handled {
-				return true
-			}
-		}
-
-		if ev.Key() == tcell.KeyRune {
-			if ev.Modifiers()&tcell.ModAlt != 0 {
-				handled := true
-				switch ev.Rune() {
-				// Increase brush radius
-				case '=':
-					m.brushRadius = min(MAX_BRUSH_RADIUS, m.brushRadius+1)
-
-					// Decrease brush radius
-				case '-':
-					m.brushRadius = max(1, m.brushRadius-1)
-
-					// Resize
-				case '[':
-					t := &ResizeTool{}
-					t.SetDimsFromSelection(m.CurrentCanvas())
-					t.InitHandles()
-					m.SetTool(t)
-
-					// Toggle alpha lock
-				case '1':
-					m.lockMask ^= LockMaskAlpha
-
-					// Toggle character lock
-				case '2':
-					m.lockMask ^= LockMaskChar
-
-					// Toggle foreground color lock
-				case '3':
-					m.lockMask ^= LockMaskFg
-
-					// Toggle background color lock
-				case '4':
-					m.lockMask ^= LockMaskBg
-
-					// Clear selection
-				case ',':
-					m.Stage()
-					m.stagingCanvas.ClearSelection()
-					m.Commit()
-
-					// Fill selection with current brush
-				case '.':
-					m.Stage()
-					c := Cell{
-						Value: m.brushCharacter,
-						Style: tcell.StyleDefault.Foreground(m.fgColor).Background(m.bgColor),
-					}
-					m.stagingCanvas.FillSelection(c, m.lockMask)
-					m.Commit()
-				default:
-					handled = false
-				}
-				if handled {
-					return true
-				}
-			}
+			return true
 		}
 	}
 	return false
