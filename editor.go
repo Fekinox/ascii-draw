@@ -116,14 +116,14 @@ type Editor struct {
 	undoHistoryPos int
 	historyChanged bool
 
-	isPasting bool
-	pasteData []byte
+	isPasting        bool
+	pendingPasteData []byte
 
 	savedFile string
 	// Position of the currently saved editor state in the undo history
 	savedUndoIndex int
 
-	startTime time.Time
+	appStartTime time.Time
 
 	notification NotificationHandler
 
@@ -140,7 +140,7 @@ func Init(a *App, screen tcell.Screen) *Editor {
 		canvas:         MakeBuffer(INIT_WIDTH, INIT_HEIGHT),
 		brushCharacter: '#',
 		brushRadius:    1,
-		startTime:      time.Now(),
+		appStartTime:   time.Now(),
 		notification:   &NotificationWidget{},
 		keymap:         defaultKeymap(),
 	}
@@ -288,7 +288,7 @@ func (m *Editor) HandlePaste(event tcell.Event) bool {
 	case *tcell.EventPaste:
 		if ev.Start() {
 			m.isPasting = true
-			m.pasteData = []byte{}
+			m.pendingPasteData = []byte{}
 		} else if m.isPasting && ev.End() {
 			// set clipboard and return to stamp tool
 			m.SetClipboardFromPasteData()
@@ -306,9 +306,9 @@ func (m *Editor) HandlePaste(event tcell.Event) bool {
 			if r > unicode.MaxASCII {
 				r = '?'
 			}
-			m.pasteData = append(m.pasteData, byte(r))
+			m.pendingPasteData = append(m.pendingPasteData, byte(r))
 		default:
-			m.pasteData = append(m.pasteData, '\n')
+			m.pendingPasteData = append(m.pendingPasteData, '\n')
 		}
 		return true
 	}
@@ -516,7 +516,7 @@ func (m *Editor) HandleShortcuts(event tcell.Event) bool {
 					},
 					"Save to ascii-draw file",
 					"save path...",
-					"",
+					m.savedFile,
 				))
 
 			case action.Load:
@@ -748,7 +748,7 @@ func (m *Editor) Draw(p Painter, x, y, w, h int, lag float64) {
 
 	// color picker
 	if m.colorPickState == ColorPickHover {
-		t := time.Now().Sub(m.startTime).Seconds()
+		t := time.Now().Sub(m.appStartTime).Seconds()
 		cx, cy := m.cursorX+m.sx, m.cursorY+m.sy
 		cc := m.CurrentCanvas()
 
@@ -1102,7 +1102,7 @@ func (m *Editor) SetClipboard() {
 func (m *Editor) SetClipboardFromPasteData() {
 	var width, height int
 	var w = 0
-	for _, c := range m.pasteData {
+	for _, c := range m.pendingPasteData {
 		if c == '\n' {
 			height++
 			w = 0
@@ -1114,7 +1114,7 @@ func (m *Editor) SetClipboardFromPasteData() {
 	clip := MakeGrid(width+1, height+1, Cell{Value: ' '})
 
 	var x, y int
-	for _, c := range m.pasteData {
+	for _, c := range m.pendingPasteData {
 		if c == '\n' {
 			x, y = 0, y+1
 		} else {
